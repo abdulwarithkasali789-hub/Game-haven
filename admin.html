@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Haven | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0a0a0a; color: #fff; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #111; padding: 20px; border-radius: 12px; border: 2px solid #33ff00; box-shadow: 0 0 15px #33ff0033; }
+        h1 { color: #33ff00; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+        label { display: block; margin-top: 10px; color: #888; font-size: 0.8rem; }
+        input, textarea, button { width: 100%; margin: 8px 0; padding: 14px; border-radius: 6px; border: 1px solid #333; box-sizing: border-box; font-size: 16px; }
+        input, textarea { background: #222; color: #fff; outline: none; }
+        input:focus { border-color: #33ff00; }
+        button { background: #33ff00; color: #000; font-weight: bold; cursor: pointer; border: none; margin-top: 20px; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>GH Admin Panel</h1>
+    
+    <label>Listing Title</label>
+    <input type="text" id="gameTitle" placeholder="e.g. 50+ Skins Account">
+    
+    <label>Game Category</label>
+    <input type="text" id="gameName" placeholder="e.g. Fortnite">
+    
+    <label>Price in USD</label>
+    <input type="number" id="price" placeholder="e.g. 25">
+    
+    <label>Accounts (One per line)</label>
+    <textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
+    
+    <button id="uploadBtn" onclick="uploadStock()">Upload to Vault</button>
+</div>
+
+<script>
+    // These are now corrected with your actual project data
+    const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
+    const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
+
+    const supabaseClient = supabase.createClient(S_URL, S_KEY);
+
+    async function uploadStock() {
+        const btn = document.getElementById('uploadBtn');
+        const title = document.getElementById('gameTitle').value;
+        const game = document.getElementById('gameName').value;
+        const price = document.getElementById('price').value;
+        const list = document.getElementById('creds').value.split('\n');
+
+        if(!title || !game || !price || !list[0]) {
+            alert("Please fill all fields!");
+            return;
+        }
+
+        btn.innerText = "Uploading...";
+        btn.disabled = true;
+
+        const dataToUpload = list.filter(line => line.trim() !== "").map(acc => ({
+            title: title,
+            game_name: game,
+            account_details: acc,
+            price: parseFloat(price),
+            is_sold: false
+        }));
+
+        const { error } = await supabaseClient.from('game_accounts').insert(dataToUpload);
+
+        if (error) {
+            alert("Error: " + error.message);
+            btn.innerText = "Try Again";
+            btn.disabled = false;
+        } else {
+            alert("Success! Added " + dataToUpload.length + " accounts.");
+            document.getElementById('creds').value = "";
+            btn.innerText = "Upload to Vault";
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
