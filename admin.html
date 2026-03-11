@@ -5,73 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Haven | Admin</title>
 
-<script>
-(function(){
- let pass = prompt("Enter Admin Password:");
- if(pass !== "hvcked"){
-   alert("Unauthorized");
-   window.location.href="index.html";
- }
-})();
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body { background:#0a0a0a; color:white; font-family:sans-serif; padding:15px; margin:0; }
-h1 { text-align:center; color:#33ff00; margin-bottom:20px; }
-.container { max-width:600px; margin:auto; background:#111; padding:20px; border-radius:12px; border:1px solid #33ff00; }
+body { background:#0a0a0a; color:white; font-family:sans-serif; padding:15px; margin:0; text-align:center; }
+h1 { color:#33ff00; margin-bottom:20px; }
+.container { max-width:600px; margin:auto; background:#111; padding:20px; border-radius:12px; border:1px solid #33ff00; display:none; }
 input,textarea,button { width:100%; padding:12px; margin:8px 0; border-radius:6px; border:none; font-size:15px; box-sizing:border-box; }
 input,textarea { background:#222; color:white; outline:none; }
 button { background:#33ff00; color:#000; font-weight:bold; cursor:pointer; }
 button:hover { background:#2bd400; }
 button:active { transform:scale(0.98); }
-.stock-table { margin-top:30px; width:100%; overflow-x:auto; }
-table { width:100%; border-collapse:collapse; }
-th,td { padding:10px; border-bottom:1px solid #333; text-align:left; font-size:14px; }
-.delete { background:#ff4444; color:white; padding:5px 8px; border:none; border-radius:4px; cursor:pointer; }
-.sold { background:#ffaa00; color:black; padding:5px 8px; border:none; border-radius:4px; cursor:pointer; }
 .toast { position:fixed; bottom:20px; right:20px; background:#33ff00; color:black; padding:12px 20px; border-radius:6px; font-weight:bold; z-index:9999; }
 </style>
 </head>
 <body>
 
-<h1>GAME HAVEN ADMIN</h1>
+<h1>GAME HAVEN ADMIN PANEL</h1>
 
-<div class="container">
-
-<input id="gameTitle" placeholder="Listing Title">
-<input id="gameName" placeholder="Game Name">
-<input id="price" type="number" placeholder="Price in USD">
-<input id="stock" type="number" placeholder="Stock (optional)">
-<textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
-<label>Account Image</label>
-<input type="file" id="imageUpload" accept="image/*">
-<button id="uploadBtn" onclick="uploadStock()">Upload Accounts</button>
-
+<div id="loginDiv">
+    <p>Enter Admin Password:</p>
+    <input type="password" id="adminPass" placeholder="Password">
+    <button onclick="checkPassword()">Login</button>
 </div>
 
-<div class="stock-table">
-<h2>Stock Manager</h2>
-<table>
-<thead>
-<tr>
-<th>Game</th>
-<th>Title</th>
-<th>Price</th>
-<th>Stock</th>
-<th>Status</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody id="stockTable"></tbody>
-</table>
+<div class="container" id="adminContainer">
+    <input id="gameTitle" placeholder="Listing Title">
+    <input id="gameName" placeholder="Game Name">
+    <input id="price" type="number" placeholder="Price in USD">
+    <input id="stock" type="number" placeholder="Stock (optional)">
+    <textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
+    <label>Account Image</label>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button id="uploadBtn" onclick="uploadStock()">Upload Accounts</button>
+
+    <div class="stock-table">
+        <h2>Stock Manager</h2>
+        <table>
+        <thead>
+            <tr>
+            <th>Game</th>
+            <th>Title</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Status</th>
+            <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="stockTable"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
 const S_URL="https://xuxflsuixgiwdvawhhbi.supabase.co";
 const S_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
-
 const supabaseClient = supabase.createClient(S_URL,S_KEY);
 
 function toast(msg){
@@ -80,6 +68,17 @@ function toast(msg){
     t.innerText = msg;
     document.body.appendChild(t);
     setTimeout(()=>t.remove(),3000);
+}
+
+function checkPassword(){
+    const pass = document.getElementById('adminPass').value;
+    if(pass==="hvcked"){
+        document.getElementById('loginDiv').style.display="none";
+        document.getElementById('adminContainer').style.display="block";
+        loadStock();
+    } else {
+        toast("Incorrect password!");
+    }
 }
 
 async function uploadStock(){
@@ -100,16 +99,13 @@ async function uploadStock(){
     btn.disabled=true;
 
     let image_url = null;
-
     if(imageInput.files.length > 0){
         const file = imageInput.files[0];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const { data, error: uploadError } = await supabaseClient
-            .storage
-            .from('game-images')
+            .storage.from('game-images')
             .upload(fileName, file, { cacheControl:'3600', upsert:true });
-
         if(uploadError){
             toast("Image upload failed");
             btn.innerText="Upload Accounts";
@@ -137,7 +133,7 @@ async function uploadStock(){
         return;
     }
 
-    toast(`Added ${dataToUpload.length} accounts successfully!`);
+    toast(`Added ${dataToUpload.length} accounts!`);
     document.getElementById('creds').value="";
     imageInput.value=null;
     btn.innerText="Upload Accounts";
@@ -150,7 +146,6 @@ async function loadStock(){
     const { data } = await supabaseClient.from('game_accounts').select('*').order('id',{ascending:false});
     const table = document.getElementById('stockTable');
     table.innerHTML="";
-
     data.forEach(acc=>{
         const tr = document.createElement('tr');
         tr.innerHTML=`
@@ -179,8 +174,6 @@ async function markSold(id){
     toast("Marked as sold");
     loadStock();
 }
-
-loadStock();
 </script>
 
 </body>
