@@ -1,97 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Haven | Admin Access</title>
-    
-    <script>
-        (function() {
-            var pass = prompt("Enter Admin Password:");
-            if (pass !== "hvcked") {
-                alert("Unauthorized Access. Returning to Home.");
-                window.location.href = "index.html";
-            }
-        })();
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Haven | Admin</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { background: #0a0a0a; color: #fff; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: #111; padding: 20px; border-radius: 12px; border: 2px solid #33ff00; box-shadow: 0 0 15px #33ff0033; }
-        h1 { color: #33ff00; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
-        label { display: block; margin-top: 10px; color: #888; font-size: 0.8rem; }
-        input, textarea, button { width: 100%; margin: 8px 0; padding: 14px; border-radius: 6px; border: 1px solid #333; box-sizing: border-box; font-size: 16px; }
-        input, textarea { background: #222; color: #fff; outline: none; }
-        input:focus { border-color: #33ff00; }
-        button { background: #33ff00; color: #000; font-weight: bold; cursor: pointer; border: none; margin-top: 20px; transition: 0.3s; }
-        button:active { transform: scale(0.98); }
-        .logout-btn { background: #ff4444; color: white; margin-top: 10px; font-size: 12px; padding: 8px; }
-    </style>
+<script>
+(function(){
+ let pass = prompt("Enter Admin Password:");
+ if(pass !== "hvcked"){
+   alert("Unauthorized");
+   window.location.href="index.html";
+ }
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body { background:#0a0a0a; color:white; font-family:sans-serif; padding:15px; margin:0; }
+h1 { text-align:center; color:#33ff00; margin-bottom:20px; }
+.container { max-width:600px; margin:auto; background:#111; padding:20px; border-radius:12px; border:1px solid #33ff00; }
+input,textarea,button { width:100%; padding:12px; margin:8px 0; border-radius:6px; border:none; font-size:15px; box-sizing:border-box; }
+input,textarea { background:#222; color:white; outline:none; }
+button { background:#33ff00; color:#000; font-weight:bold; cursor:pointer; }
+button:hover { background:#2bd400; }
+button:active { transform:scale(0.98); }
+.stock-input { width:100px; }
+.toast { position:fixed; bottom:20px; right:20px; background:#33ff00; color:black; padding:12px 20px; border-radius:6px; font-weight:bold; z-index:9999; }
+.stock-table { margin-top:30px; width:100%; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th,td { padding:10px; border-bottom:1px solid #333; text-align:left; font-size:14px; }
+.delete { background:#ff4444; color:white; padding:5px 8px; border:none; border-radius:4px; cursor:pointer; }
+.sold { background:#ffaa00; color:black; padding:5px 8px; border:none; border-radius:4px; cursor:pointer; }
+</style>
 </head>
 <body>
 
+<h1>GAME HAVEN ADMIN</h1>
+
 <div class="container">
-    <h1>GH Admin Panel</h1>
-    
-    <label>Listing Title</label>
-    <input type="text" id="gameTitle" placeholder="e.g. 50+ Skins Account">
-    
-    <label>Game Category</label>
-    <input type="text" id="gameName" placeholder="e.g. Fortnite">
-    
-    <label>Price in USD</label>
-    <input type="number" id="price" placeholder="e.g. 25">
-    
-    <label>Accounts (One per line)</label>
-    <textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
-    
-    <button id="uploadBtn" onclick="uploadStock()">Upload to Vault</button>
-    <button class="logout-btn" onclick="location.reload()">Lock Panel (Logout)</button>
+
+<input id="gameTitle" placeholder="Listing Title">
+<input id="gameName" placeholder="Game Name">
+<input id="price" type="number" placeholder="Price in USD">
+<input id="stock" type="number" placeholder="Stock (optional)">
+<textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
+<label>Account Image</label>
+<input type="file" id="imageUpload" accept="image/*">
+<button id="uploadBtn" onclick="uploadStock()">Upload Accounts</button>
+
+</div>
+
+<div class="stock-table">
+<h2>Stock Manager</h2>
+<table>
+<thead>
+<tr>
+<th>Game</th>
+<th>Title</th>
+<th>Price</th>
+<th>Stock</th>
+<th>Status</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="stockTable"></tbody>
+</table>
 </div>
 
 <script>
-    const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
-    const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
+const S_URL="https://xuxflsuixgiwdvawhhbi.supabase.co";
+const S_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
 
-    const supabaseClient = supabase.createClient(S_URL, S_KEY);
+const supabaseClient = supabase.createClient(S_URL,S_KEY);
 
-    async function uploadStock() {
-        const btn = document.getElementById('uploadBtn');
-        const title = document.getElementById('gameTitle').value;
-        const game = document.getElementById('gameName').value;
-        const price = document.getElementById('price').value;
-        const list = document.getElementById('creds').value.split('\n');
+function toast(msg){
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),3000);
+}
 
-        if(!title || !game || !price || !list[0]) {
-            alert("Please fill all fields!");
+async function uploadStock(){
+    const btn = document.getElementById('uploadBtn');
+    const title = document.getElementById('gameTitle').value;
+    const game = document.getElementById('gameName').value;
+    const price = document.getElementById('price').value;
+    const stockNum = document.getElementById('stock').value || null;
+    const list = document.getElementById('creds').value.split('\n');
+    const imageInput = document.getElementById('imageUpload');
+
+    if(!title||!game||!price||!list[0]){
+        toast("Please fill all required fields!");
+        return;
+    }
+
+    btn.innerText="Uploading...";
+    btn.disabled=true;
+
+    let image_url = null;
+
+    if(imageInput.files.length > 0){
+        const file = imageInput.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const { data, error: uploadError } = await supabaseClient
+            .storage
+            .from('game-images')
+            .upload(fileName, file, { cacheControl:'3600', upsert:true });
+
+        if(uploadError){
+            toast("Image upload failed");
+            btn.innerText="Upload Accounts";
+            btn.disabled=false;
             return;
         }
-
-        btn.innerText = "Uploading...";
-        btn.disabled = true;
-
-        const dataToUpload = list.filter(line => line.trim() !== "").map(acc => ({
-            title: title,
-            game_name: game,
-            account_details: acc,
-            price: parseFloat(price),
-            is_sold: false
-        }));
-
-        const { error } = await supabaseClient.from('game_accounts').insert(dataToUpload);
-
-        if (error) {
-            alert("Error: " + error.message);
-            btn.innerText = "Try Again";
-            btn.disabled = false;
-        } else {
-            alert("Success! Added " + dataToUpload.length + " accounts.");
-            document.getElementById('creds').value = "";
-            btn.innerText = "Upload to Vault";
-            btn.disabled = false;
-        }
+        image_url = supabaseClient.storage.from('game-images').getPublicUrl(fileName).data.publicUrl;
     }
+
+    const dataToUpload = list.filter(x=>x.trim()!="").map(acc=>({
+        title:title,
+        game_name:game,
+        account_details:acc,
+        price:parseFloat(price),
+        stock: stockNum ? parseInt(stockNum) : null,
+        image_url:image_url,
+        is_sold:false
+    }));
+
+    const { error } = await supabaseClient.from('game_accounts').insert(dataToUpload);
+    if(error){
+        toast("Upload failed: "+error.message);
+        btn.innerText="Upload Accounts";
+        btn.disabled=false;
+        return;
+    }
+
+    toast(`Added ${dataToUpload.length} accounts successfully!`);
+    document.getElementById('creds').value="";
+    imageInput.value=null;
+    btn.innerText="Upload Accounts";
+    btn.disabled=false;
+
+    loadStock();
+}
+
+async function loadStock(){
+    const { data } = await supabaseClient.from('game_accounts').select('*').order('id',{ascending:false});
+    const table = document.getElementById('stockTable');
+    table.innerHTML="";
+
+    data.forEach(acc=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML=`
+            <td>${acc.game_name}</td>
+            <td>${acc.title}</td>
+            <td>$${acc.price}</td>
+            <td>${acc.stock || '-'}</td>
+            <td>${acc.is_sold?'Sold':'Available'}</td>
+            <td>
+                <button class="sold" onclick="markSold(${acc.id})">Mark Sold</button>
+                <button class="delete" onclick="deleteAcc(${acc.id})">Delete</button>
+            </td>
+        `;
+        table.appendChild(tr);
+    });
+}
+
+async function deleteAcc(id){
+    await supabaseClient.from('game_accounts').delete().eq('id',id);
+    toast("Account deleted");
+    loadStock();
+}
+
+async function markSold(id){
+    await supabaseClient.from('game_accounts').update({is_sold:true}).eq('id',id);
+    toast("Marked as sold");
+    loadStock();
+}
+
+loadStock();
 </script>
 
 </body>
