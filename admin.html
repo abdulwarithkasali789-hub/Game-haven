@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Haven | Admin</title>
+    <title>Game Haven | Admin Access</title>
+    
+    <script>
+        (function() {
+            var pass = prompt("Enter Admin Password:");
+            if (pass !== "hvcked") {
+                alert("Unauthorized Access. Returning to Home.");
+                window.location.href = "index.html";
+            }
+        })();
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #0a0a0a; color: #fff; font-family: sans-serif; padding: 20px; }
@@ -15,6 +26,7 @@
         input:focus { border-color: #33ff00; }
         button { background: #33ff00; color: #000; font-weight: bold; cursor: pointer; border: none; margin-top: 20px; transition: 0.3s; }
         button:active { transform: scale(0.98); }
+        .logout-btn { background: #ff4444; color: white; margin-top: 10px; font-size: 12px; padding: 8px; }
     </style>
 </head>
 <body>
@@ -35,10 +47,10 @@
     <textarea id="creds" rows="6" placeholder="email:password&#10;email2:password2"></textarea>
     
     <button id="uploadBtn" onclick="uploadStock()">Upload to Vault</button>
+    <button class="logout-btn" onclick="location.reload()">Lock Panel (Logout)</button>
 </div>
 
 <script>
-    // These are now corrected with your actual project data
     const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
     const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
 
