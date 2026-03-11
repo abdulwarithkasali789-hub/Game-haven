@@ -4,26 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Haven | Shop</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body { background:#0a0a0a; color:#fff; font-family:sans-serif; margin:0; padding:20px; }
-h1 { color:#33ff00; text-align:center; font-size:2.5rem; text-shadow:0 0 15px #33ff00; text-transform:uppercase; margin-bottom:5px; }
-.subtitle { text-align:center; color:#888; margin-bottom:20px; letter-spacing:1px; }
-.controls { text-align:center; margin-bottom:30px; }
-.controls input, .controls select { padding:10px 15px; border-radius:6px; border:none; margin:5px; font-size:14px; outline:none; }
-.controls input { width:200px; }
+h1 { color:#33ff00; text-align:center; font-size:2.5rem; text-shadow:0 0 15px #33ff00; margin-bottom:5px; text-transform:uppercase; }
+.subtitle { text-align:center; color:#888; margin-bottom:40px; letter-spacing:1px; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:25px; max-width:1200px; margin:auto; }
-.card { background:#111; border:1px solid #333; padding:15px; border-radius:15px; transition:0.3s; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+.card { background:#111; border:1px solid #333; padding:25px; border-radius:15px; transition:0.3s; position:relative; overflow:hidden; }
 .card:hover { border-color:#33ff00; box-shadow:0 0 20px #33ff0022; transform:translateY(-5px); }
-.card img { width:100%; height:150px; object-fit:cover; border-radius:10px; margin-bottom:10px; }
-.tag { background:#33ff00; color:#000; padding:5px 10px; border-radius:4px; font-weight:bold; font-size:0.75rem; text-transform:uppercase; display:inline-block; margin-bottom:5px; }
-h3 { margin:0 0 10px 0; font-size:1.2rem; color:#eee; }
-.price { font-size:1.5rem; color:#33ff00; font-weight:bold; margin-bottom:10px; display:block; }
-.stock { font-size:0.9rem; color:#aaa; margin-bottom:10px; }
-button { width:100%; background:#33ff00; color:#000; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; transition:0.2s; }
+.tag { background:#33ff00; color:#000; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:0.75rem; text-transform:uppercase; display:inline-block; }
+h3 { margin:20px 0 10px 0; font-size:1.4rem; color:#eee; }
+.price { font-size:1.8rem; color:#33ff00; font-weight:bold; margin-bottom:15px; display:block; }
+button { width:100%; background:#33ff00; color:#000; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; transition:0.2s; }
 button:hover { background:#2bd400; }
 #loading { text-align:center; color:#33ff00; font-weight:bold; margin-top:50px; }
-.toast { position:fixed; bottom:20px; right:20px; background:#33ff00; color:black; padding:12px 20px; border-radius:6px; font-weight:bold; z-index:9999; }
+.card img { width:100%; border-radius:10px; margin-bottom:15px; }
+
+/* Modal Styles */
+.modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.8); }
+.modal-content { background:#111; margin:15% auto; padding:20px; border-radius:12px; border:2px solid #33ff00; max-width:400px; text-align:center; }
+.modal-content h3 { margin-bottom:15px; color:#33ff00; }
+.modal-content a { display:inline-block; margin:10px; padding:10px 15px; background:#33ff00; color:#000; text-decoration:none; border-radius:6px; font-weight:bold; }
+.modal-content a:hover { background:#2bd400; }
+.close-btn { position:absolute; top:15px; right:20px; font-size:22px; color:#33ff00; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -31,139 +35,79 @@ button:hover { background:#2bd400; }
 <h1>GAME HAVEN</h1>
 <div class="subtitle">PREMIUM ACCOUNTS VAULT</div>
 
-<div class="controls">
-    <input type="text" id="searchInput" placeholder="Search accounts...">
-    <select id="gameFilter">
-        <option value="all">All Games</option>
-    </select>
-</div>
-
 <div id="loading">Scanning the database...</div>
 <div class="grid" id="account-list"></div>
 
+<!-- Modal for payment options -->
+<div id="paymentModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <h3 id="modalTitle"></h3>
+    <a id="whatsappBtn" href="#" target="_blank">WhatsApp</a>
+    <a id="paypalBtn" href="#" target="_blank">PayPal</a>
+    <a id="contactBtn" href="#">Contact Us</a>
+  </div>
+</div>
+
 <script>
-const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
-const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
-
-const supabaseClient = supabase.createClient(S_URL, S_KEY);
-let allAccounts = [];
-
-function showToast(msg){
-    const toast = document.createElement("div");
-    toast.className = "toast";
-    toast.innerText = msg;
-    document.body.appendChild(toast);
-    setTimeout(()=>toast.remove(),3000);
-}
+const S_URL="https://xuxflsuixgiwdvawhhbi.supabase.co";
+const S_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
+const supabaseClient = supabase.createClient(S_URL,S_KEY);
 
 async function loadAccounts(){
-    const loadingDiv = document.getElementById('loading');
-    const container = document.getElementById('account-list');
-    try {
-        const { data, error } = await supabaseClient
-            .from('game_accounts')
-            .select('*')
-            .eq('is_sold', false)
-            .order('id', {ascending:false});
+    const loadingDiv=document.getElementById('loading');
+    const container=document.getElementById('account-list');
 
-        loadingDiv.style.display = "none";
+    try{
+        const {data,error} = await supabaseClient.from('game_accounts').select('*').eq('is_sold',false);
+        loadingDiv.style.display='none';
         if(error) throw error;
 
-        allAccounts = data;
         if(!data || data.length===0){
-            container.innerHTML = "<p style='grid-column:1/-1;text-align:center;color:#666;'>Vault is currently empty. Check back later!</p>";
+            container.innerHTML="<p style='grid-column:1/-1;text-align:center;color:#666;'>Vault is currently empty. Check back later!</p>";
             return;
         }
 
-        populateFilterOptions(data);
-        renderAccounts();
+        container.innerHTML='';
+        data.forEach(acc=>{
+            const card = document.createElement('div');
+            card.className='card';
+            card.innerHTML=`
+                ${acc.image_url ? `<img src="${acc.image_url}" alt="${acc.title}">` : ''}
+                <span class="tag">${acc.game_name}</span>
+                <h3>${acc.title}</h3>
+                <span class="price">$${acc.price}</span>
+                <button onclick="openModal('${acc.title}', ${acc.price})">BUY NOW</button>
+            `;
+            container.appendChild(card);
+        });
 
-    } catch(err){
-        loadingDiv.innerText = "Error loading data: "+err.message;
+    }catch(err){
+        loadingDiv.innerText="Error loading data: "+err.message;
         console.error(err);
     }
 }
 
-function populateFilterOptions(data){
-    const filter = document.getElementById('gameFilter');
-    const games = [...new Set(data.map(acc=>acc.game_name))];
-    filter.innerHTML = '<option value="all">All Games</option>';
-    games.forEach(game=>{
-        const option = document.createElement('option');
-        option.value = game;
-        option.innerText = game;
-        filter.appendChild(option);
-    });
+// Modal functions
+function openModal(title, price){
+    document.getElementById('modalTitle').innerText=`Purchase "${title}" ($${price})`;
+    document.getElementById('whatsappBtn').href='https://wa.me/1234567890';
+    document.getElementById('paypalBtn').href='https://paypal.me/yourlink';
+    document.getElementById('contactBtn').href='#';
+    document.getElementById('paymentModal').style.display='block';
 }
 
-function renderAccounts(){
-    const container = document.getElementById('account-list');
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const filter = document.getElementById('gameFilter').value;
-
-    container.innerHTML = "";
-
-    allAccounts.filter(acc=>{
-        return (filter==='all' || acc.game_name===filter) &&
-               (acc.title.toLowerCase().includes(search) || acc.game_name.toLowerCase().includes(search));
-    }).forEach(acc=>{
-        const card = document.createElement('div');
-        card.className="card";
-
-        const img = document.createElement('img');
-        img.src = acc.image_url || "https://via.placeholder.com/300x150?text=Game+Haven";
-        card.appendChild(img);
-
-        const tag = document.createElement('span');
-        tag.className="tag";
-        tag.innerText=acc.game_name;
-        card.appendChild(tag);
-
-        const h3 = document.createElement('h3');
-        h3.innerText=acc.title;
-        card.appendChild(h3);
-
-        const price = document.createElement('span');
-        price.className="price";
-        price.innerText=`$${acc.price}`;
-        card.appendChild(price);
-
-        if(acc.stock) {
-            const stock = document.createElement('span');
-            stock.className='stock';
-            stock.innerText=`Stock: ${acc.stock}`;
-            card.appendChild(stock);
-        }
-
-        const btn = document.createElement('button');
-        btn.innerText="BUY NOW";
-        btn.onclick = ()=>{
-            const payment = prompt("Choose payment method:\n1: WhatsApp\n2: PayPal\n3: Bank/Mobile Money");
-            if(payment==="1"){
-                const msg = encodeURIComponent(`Hello, I want to buy this account: ${acc.title} (${acc.game_name})`);
-                window.open(`https://wa.me/234XXXXXXXXXX?text=${msg}`,'_blank');
-                showToast("Redirecting to WhatsApp...");
-            } else if(payment==="2"){
-                window.open(`https://www.paypal.com/paypalme/YourUsername/${acc.price}`,'_blank');
-                showToast("Redirecting to PayPal...");
-            } else if(payment==="3"){
-                alert(`Send ${acc.price} USD to your bank/momo details and contact us via WhatsApp`);
-                showToast("Check instructions for Bank/Mobile payment");
-            } else {
-                showToast("Payment cancelled");
-            }
-        };
-        card.appendChild(btn);
-
-        container.appendChild(card);
-    });
+function closeModal(){
+    document.getElementById('paymentModal').style.display='none';
 }
 
-document.getElementById('searchInput').addEventListener('input',renderAccounts);
-document.getElementById('gameFilter').addEventListener('change',renderAccounts);
+// Close modal when clicking outside
+window.onclick = function(event){
+    const modal = document.getElementById('paymentModal');
+    if(event.target==modal) modal.style.display='none';
+}
 
 loadAccounts();
 </script>
-
 </body>
 </html>
