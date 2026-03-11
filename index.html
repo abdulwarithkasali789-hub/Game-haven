@@ -43,7 +43,7 @@ button:hover { background:#2bd400; }
 
 <script>
 const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
-const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
+const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
 
 const supabaseClient = supabase.createClient(S_URL, S_KEY);
 let allAccounts = [];
@@ -138,9 +138,20 @@ function renderAccounts(){
         const btn = document.createElement('button');
         btn.innerText="BUY NOW";
         btn.onclick = ()=>{
-            const msg = encodeURIComponent(`Hello, I want to buy this account: ${acc.title} (${acc.game_name})`);
-            window.open(`https://wa.me/234XXXXXXXXXX?text=${msg}`,'_blank');
-            showToast("Redirecting to WhatsApp...");
+            const payment = prompt("Choose payment method:\n1: WhatsApp\n2: PayPal\n3: Bank/Mobile Money");
+            if(payment==="1"){
+                const msg = encodeURIComponent(`Hello, I want to buy this account: ${acc.title} (${acc.game_name})`);
+                window.open(`https://wa.me/234XXXXXXXXXX?text=${msg}`,'_blank');
+                showToast("Redirecting to WhatsApp...");
+            } else if(payment==="2"){
+                window.open(`https://www.paypal.com/paypalme/YourUsername/${acc.price}`,'_blank');
+                showToast("Redirecting to PayPal...");
+            } else if(payment==="3"){
+                alert(`Send ${acc.price} USD to your bank/momo details and contact us via WhatsApp`);
+                showToast("Check instructions for Bank/Mobile payment");
+            } else {
+                showToast("Payment cancelled");
+            }
         };
         card.appendChild(btn);
 
