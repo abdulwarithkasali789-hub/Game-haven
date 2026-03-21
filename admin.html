@@ -1,98 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GH Admin | Upload</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { background: #0a0a0a; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .admin-card { background: #111; border: 2px solid #33ff00; padding: 30px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 0 20px rgba(51, 255, 0, 0.1); }
-        h2 { color: #33ff00; text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 25px; }
-        label { display: block; margin: 15px 0 5px; color: #888; font-size: 0.8rem; text-transform: uppercase; }
-        input, select, textarea { width: 100%; background: #1a1a1a; border: 1px solid #333; padding: 12px; border-radius: 8px; color: #fff; box-sizing: border-box; outline: none; }
-        input:focus { border-color: #33ff00; }
-        button { width: 100%; background: #33ff00; color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 25px; text-transform: uppercase; transition: 0.3s; }
-        button:hover { background: #2bd400; transform: scale(1.02); }
-        button:disabled { background: #444; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-
-    <div class="admin-card">
-        <h2>GH Admin Panel</h2>
-        
-        <label>Listing Title</label>
-        <input type="text" id="title" placeholder="e.g. OG Ghoul Trooper Account">
-
-        <label>Game Category</label>
-        <select id="game_name">
-            <option value="FORTNITE">Fortnite</option>
-            <option value="PUBG">PUBG</option>
-            <option value="ROBLOX">Roblox</option>
-            <option value="COD">Call of Duty</option>
-        </select>
-
-        <label>Price (USD)</label>
-        <input type="number" id="price" placeholder="50">
-
-        <label>Account Details (Credentials)</label>
-        <textarea id="details" rows="3" placeholder="email:password"></textarea>
-
-        <button id="uploadBtn" onclick="uploadToVault()">Upload to Vault</button>
-    </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Haven | Admin</title>
 
 <script>
-    // Your Project Credentials
-    const S_URL = "https://xuxflsuixgiwdvawhhbi.supabase.co"; 
-    const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c";
-
-    const supabaseClient = supabase.createClient(S_URL, S_KEY);
-
-    async function uploadToVault() {
-        const btn = document.getElementById('uploadBtn');
-        const title = document.getElementById('title').value;
-        const game = document.getElementById('game_name').value;
-        const price = document.getElementById('price').value;
-        const details = document.getElementById('details').value;
-
-        if(!title || !price || !details) {
-            alert("Please fill in all fields!");
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerText = "Uploading...";
-
-        try {
-            const { data, error } = await supabaseClient
-                .from('game_accounts')
-                .insert([
-                    { 
-                        title: title, 
-                        game_name: game, 
-                        price: parseFloat(price), 
-                        details: details,
-                        is_sold: false 
-                    }
-                ]);
-
-            if (error) throw error;
-
-            alert("Success! Account is now live in the Vault.");
-            // Clear form
-            document.getElementById('title').value = "";
-            document.getElementById('price').value = "";
-            document.getElementById('details').value = "";
-
-        } catch (err) {
-            alert("Error: " + err.message);
-            console.error(err);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Upload to Vault";
-        }
-    }
+(function(){
+  let pass = prompt("Enter Admin Password:");
+  if(pass !== "hvcked"){
+    alert("Access Denied");
+    window.location.href="index.html";
+  }
+})();
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{background:#0a0a0a;color:white;font-family:sans-serif;padding:20px;}
+h1{text-align:center;color:#33ff00;}
+.container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
+input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;}
+button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+.list{margin-top:40px;}
+.item{background:#111;border:1px solid #333;padding:15px;margin-bottom:10px;border-radius:8px;position:relative;}
+.smallbtn{width:auto;padding:6px 10px;margin-right:6px;font-size:12px;}
+.delete{background:#ff4444;color:white;}
+.sold{background:orange;}
+.toast{position:fixed;bottom:20px;right:20px;background:#33ff00;color:black;padding:12px 20px;border-radius:8px;opacity:0;transition:0.5s;z-index:9999;}
+.toast.error{background:#ff4444;color:white;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>Game Haven Admin</h1>
+
+<input id="title" placeholder="Listing Title">
+<input id="game" placeholder="Game Name">
+<input id="price" type="number" placeholder="Price USD">
+<input id="image" placeholder="Image URL">
+<textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
+<button onclick="upload()">Upload Accounts</button>
+</div>
+
+<div class="list" id="accountList"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const supabase = window.supabase.createClient(
+  "https://xuxflsuixgiwdvawhhbi.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1c2Vfcm9sZSIsImlhdCI6MTc3MzA5MzUzOSwiZXhwIjoyMDg4NjY5NTM5fQ.tD1MfScOE83YkaxCpS7PkWwW8UVAo-NwOYD4zu2bhb0"
+);
+
+function showToast(msg,type="success"){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.className="toast"+(type==="error"?" error":"");
+  t.style.opacity="1";
+  setTimeout(()=>{t.style.opacity="0"},2500);
+}
+
+async function upload(){
+  let title=document.getElementById("title").value;
+  let game=document.getElementById("game").value;
+  let price=document.getElementById("price").value;
+  let image=document.getElementById("image").value;
+  let list=document.getElementById("accounts").value.split("\n");
+
+  if(!title||!game||!price||!list[0]){
+    showToast("Fill all fields!","error"); return;
+  }
+
+  let rows=list.filter(x=>x.trim()!="").map(acc=>({
+    title:title,
+    game_name:game,
+    price:parseFloat(price),
+    account_details:acc,
+    image_url:image,
+    is_sold:false
+  }));
+
+  let {error}=await supabase.from("game_accounts").insert(rows);
+  if(error){showToast(error.message,"error");}else{
+    showToast("Uploaded "+rows.length+" accounts");
+    load();
+    document.getElementById("accounts").value="";
+  }
+}
+
+async function load(){
+  let {data}=await supabase.from("game_accounts").select("*").order("id",{ascending:false});
+  let box=document.getElementById("accountList");
+  if(!data||data.length==0){box.innerHTML="<p>No accounts yet</p>"; return;}
+  box.innerHTML="";
+
+  data.forEach(acc=>{
+    box.innerHTML+=`
+      <div class="item">
+        <b>${acc.title}</b><br>
+        Game: ${acc.game_name}<br>
+        Price: $${acc.price}<br>
+        Account: ${acc.account_details}<br>
+        Status: ${acc.is_sold?"SOLD":"AVAILABLE"}<br><br>
+        <button class="smallbtn sold" onclick="markSold(${acc.id})">Mark Sold</button>
+        <button class="smallbtn delete" onclick="deleteAcc(${acc.id})">Delete</button>
+      </div>`;
+  });
+}
+
+async function markSold(id){
+  await supabase.from("game_accounts").update({is_sold:true}).eq("id",id);
+  showToast("Marked as SOLD");
+  load();
+}
+
+async function deleteAcc(id){
+  await supabase.from("game_accounts").delete().eq("id",id);
+  showToast("Deleted account");
+  load();
+}
+
+load();
+</script>
+
 </body>
 </html>
