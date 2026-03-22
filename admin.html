@@ -23,10 +23,14 @@ h1{text-align:center;color:#33ff00;}
 .container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
 input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;}
 button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-.smallbtn{width:auto;padding:6px 10px;margin-top:10px;}
-.toast{position:fixed;bottom:20px;right:20px;background:#33ff00;color:black;padding:12px 20px;border-radius:8px;opacity:0;transition:0.5s;}
+.list{margin-top:40px;}
+.item{background:#111;border:1px solid #333;padding:15px;margin-bottom:10px;border-radius:8px;}
+.smallbtn{width:auto;padding:6px 10px;margin-right:6px;font-size:12px;}
+.delete{background:#ff4444;color:white;}
+.sold{background:orange;}
+.toast{position:fixed;bottom:20px;right:20px;background:#33ff00;color:black;padding:12px 20px;border-radius:8px;opacity:0;transition:0.5s;z-index:9999;}
 .toast.error{background:#ff4444;color:white;}
-.debug{font-size:12px;margin-top:10px;color:#33ff00;}
+.debug{color:#33ff00;margin-top:10px;font-size:12px;}
 </style>
 </head>
 
@@ -38,87 +42,48 @@ button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;bo
 <input id="title" placeholder="Listing Title">
 <input id="game" placeholder="Game Name">
 <input id="price" type="number" placeholder="Price USD">
-
-<input type="file" id="fileInput">
-<button class="smallbtn" onclick="uploadImage()">Upload Image</button>
-
-<input id="image" placeholder="Image URL (auto filled)">
-
+<input id="image" placeholder="Image URL">
 <textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
+<button onclick="upload()">Upload Accounts</button>
 
-<button onclick="uploadAccounts()">Upload Accounts</button>
-
+<div class="list" id="accountList"></div>
+<div id="toast" class="toast"></div>
 <div id="debug" class="debug"></div>
 </div>
-
-<div id="toast" class="toast"></div>
 
 <script>
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1c2Vfcm9sZSIsImlhdCI6MTc3MzA5MzUzOSwiZXhwIjoyMDg4NjY5NTM5fQ.tD1MfScOE83YkaxCpS7PkWwW8UVAo-NwOYD4zu2bhb0"
 );
 
-function toast(msg,type="success"){
-  let t=document.getElementById("toast");
+function showToast(msg,type="success"){
+  const t=document.getElementById("toast");
   t.innerText=msg;
   t.className="toast"+(type==="error"?" error":"");
   t.style.opacity="1";
-  setTimeout(()=>t.style.opacity="0",2500);
+  setTimeout(()=>{t.style.opacity="0"},2500);
 }
 
 function debug(msg){
-  document.getElementById("debug").innerText=msg;
+  document.getElementById("debug").innerText = msg;
 }
 
-async function uploadImage(){
-  const file=document.getElementById("fileInput").files[0];
-
-  if(!file){
-    toast("Select an image first","error");
-    return;
-  }
-
-  const fileName = Date.now() + "_" + file.name;
-
-  debug("Uploading image...");
-
-  const {error} = await supabase.storage
-    .from("account-images")
-    .upload(fileName, file);
-
-  if(error){
-    toast("Image upload failed","error");
-    debug(error.message);
-    return;
-  }
-
-  const {data} = supabase.storage
-    .from("account-images")
-    .getPublicUrl(fileName);
-
-  document.getElementById("image").value = data.publicUrl;
-
-  toast("Image uploaded!");
-  debug("Image URL ready");
-}
-
-async function uploadAccounts(){
-
+async function upload(){
   let title=document.getElementById("title").value.trim();
   let game=document.getElementById("game").value.trim();
   let price=document.getElementById("price").value.trim();
   let image=document.getElementById("image").value.trim();
-  let list=document.getElementById("accounts").value.split("\n").filter(x=>x.trim()!="");
+  let list=document.getElementById("accounts").value.split("\n").map(l=>l.trim()).filter(l=>l!="");
 
   if(!title||!game||!price||!list.length){
-    toast("Fill all fields!","error");
-    debug("Missing fields");
+    showToast("Fill all fields!","error");
+    debug("Upload failed: Missing fields");
     return;
   }
 
-  let rows=list.map(acc=>({
-    title,
+  let rows = list.map(acc=>({
+    title:title,
     game_name:game,
     price:parseFloat(price),
     account_details:acc,
@@ -126,19 +91,70 @@ async function uploadAccounts(){
     is_sold:false
   }));
 
-  debug("Uploading accounts...");
-
-  let {error}=await supabase.from("game_accounts").insert(rows);
-
-  if(error){
-    toast("Upload failed","error");
-    debug(error.message);
-  }else{
-    toast("Accounts uploaded!");
-    debug("Success");
-    document.getElementById("accounts").value="";
+  debug("Uploading "+rows.length+" accounts...");
+  try{
+    let {error} = await supabase.from("game_accounts").insert(rows);
+    if(error){
+      showToast("Upload failed","error");
+      debug("Supabase error: "+error.message);
+    }else{
+      showToast("Uploaded "+rows.length+" accounts");
+      debug("Upload successful");
+      document.getElementById("accounts").value="";
+      load();
+    }
+  }catch(e){
+    showToast("Upload error","error");
+    debug("Exception: "+e.message);
   }
 }
+
+async function load(){
+  try{
+    let {data,error}=await supabase.from("game_accounts").select("*").order("id",{ascending:false});
+    let box=document.getElementById("accountList");
+    if(error){ box.innerHTML="Error loading accounts"; debug(error.message); return;}
+    if(!data||data.length==0){ box.innerHTML="<p>No accounts yet</p>"; debug("No accounts found"); return;}
+    box.innerHTML="";
+    data.forEach(acc=>{
+      box.innerHTML+=`
+      <div class="item">
+        <b>${acc.title}</b><br>
+        Game: ${acc.game_name}<br>
+        Price: $${acc.price}<br>
+        Account: ${acc.account_details}<br>
+        Status: ${acc.is_sold?"SOLD":"AVAILABLE"}<br><br>
+        <button class="smallbtn sold" onclick="markSold(${acc.id})">Mark Sold</button>
+        <button class="smallbtn delete" onclick="deleteAcc(${acc.id})">Delete</button>
+      </div>`;
+    });
+    debug("Loaded "+data.length+" accounts");
+  }catch(e){
+    debug("Load exception: "+e.message);
+  }
+}
+
+async function markSold(id){
+  try{
+    await supabase.from("game_accounts").update({is_sold:true}).eq("id",id);
+    showToast("Marked as SOLD");
+    load();
+  }catch(e){
+    debug("Mark sold exception: "+e.message);
+  }
+}
+
+async function deleteAcc(id){
+  try{
+    await supabase.from("game_accounts").delete().eq("id",id);
+    showToast("Deleted account");
+    load();
+  }catch(e){
+    debug("Delete exception: "+e.message);
+  }
+}
+
+load();
 </script>
 
 </body>
