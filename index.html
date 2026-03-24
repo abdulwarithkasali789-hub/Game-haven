@@ -4,102 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Haven | Marketplace</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
     <style>
         body{background:#0a0a0a;color:white;font-family:sans-serif;margin:0;padding:20px;}
         h1{text-align:center;color:#33ff00;text-shadow:0 0 10px #33ff00;}
         .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-top:30px;}
-        .card{background:#111;border:1px solid #333;border-radius:12px;padding:20px;transition:.3s;border: 1px solid #33ff00;}
-        .card img{width:100%;border-radius:8px;height:180px;object-fit:cover;background:#222;}
-        .price{color:#33ff00;font-size:20px;font-weight:bold;}
-        button{width:100%;margin-top:10px;padding:12px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
-        #debug-info{text-align:center; color:#555; font-size:12px; margin-top:10px;}
-        #modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:100;}
-        .modal-box{background:#111;padding:20px;border-radius:12px;width:300px;text-align:center;border:1px solid #33ff00;}
-        .modal-box a{display:block;margin:10px 0;padding:12px;background:#33ff00;color:black;text-decoration:none;border-radius:6px;font-weight:bold;}
+        .card{background:#111;border:1px solid #33ff00;border-radius:12px;padding:20px;text-align:center;}
+        .card img{width:100%;border-radius:8px;height:180px;object-fit:cover;}
+        .price{color:#33ff00;font-size:20px;font-weight:bold;margin:10px 0;}
+        button{width:100%;padding:12px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
+        #status{text-align:center;color:#888;margin-bottom:20px;}
     </style>
 </head>
 <body>
 
 <h1>GAME HAVEN</h1>
-<div id="debug-info">Checking database connection...</div>
-
+<div id="status">Status: Initializing...</div>
 <div id="accounts" class="grid"></div>
 
-<div id="modal">
-    <div class="modal-box">
-        <h3 id="modal-title">Buy Account</h3>
-        <a id="whatsapp" target="_blank">Contact on WhatsApp</a>
-        <button onclick="closeModal()">Cancel</button>
-    </div>
-</div>
-
 <script>
+// Log to check if Supabase loaded
+console.log("Checking Supabase library...", window.supabase);
+
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
 );
 
-async function loadAccounts(){
+async function loadData() {
+    const status = document.getElementById("status");
     const container = document.getElementById("accounts");
-    const debug = document.getElementById("debug-info");
+    
+    status.innerText = "Status: Connecting to Database...";
     
     try {
-        debug.innerText = "Step 1: Fetching data from game_accounts...";
-        const {data, error} = await supabase
-            .from("game_accounts")
-            .select("*"); // Removed the .eq check just to see if ANY data comes through first
+        const { data, error } = await supabase
+            .from('game_accounts')
+            .select('*');
 
-        if(error) {
-            debug.innerText = "Database Error: " + error.message;
+        if (error) {
+            status.innerText = "Database Error: " + error.message;
             return;
         }
 
-        if(!data || data.length === 0){
-            debug.innerText = "Connected! But no data found in your table.";
-            container.innerHTML = "<p style='text-align:center; grid-column:1/-1;'>Vault is currently empty!</p>";
+        if (!data || data.length === 0) {
+            status.innerText = "Status: Connected. No accounts found.";
             return;
         }
 
-        debug.innerText = "Found " + data.length + " items. Generating cards...";
+        status.innerText = "Status: Found " + data.length + " items.";
         container.innerHTML = "";
-        
-        data.forEach(acc => {
-            const imgUrl = (acc.image_url && acc.image_url !== "EMPTY") ? acc.image_url : 'https://via.placeholder.com/300x200?text=Game+Haven';
-            
-            // Only show items that are NOT sold
-            if (acc.is_sold === false) {
+
+        data.forEach(item => {
+            if(!item.is_sold) {
                 container.innerHTML += `
                     <div class="card">
-                        <img src="${imgUrl}">
-                        <h3>${acc.title}</h3>
-                        <p style="color:#888">${acc.game_name}</p>
-                        <div class="price">$${acc.price}</div>
-                        <button onclick="buyAccount('${acc.title.replace(/'/g, "\\'")}', '${acc.price}')">BUY NOW</button>
+                        <img src="${item.image_url || 'https://via.placeholder.com/300x200'}">
+                        <h3>${item.title}</h3>
+                        <p>${item.game_name}</p>
+                        <div class="price">$${item.price}</div>
+                        <button onclick="window.open('https://wa.me/234703689704?text=Buy+${item.title}')">BUY NOW</button>
                     </div>
                 `;
             }
         });
-
-        if(container.innerHTML === "") {
-            debug.innerText = "All items in database are marked as SOLD.";
-        }
-
-    } catch (err) {
-        debug.innerText = "System Error: " + err.message;
+    } catch (e) {
+        status.innerText = "System Error: " + e.message;
     }
 }
 
-function buyAccount(title, price){
-    document.getElementById("modal").style.display = "flex";
-    document.getElementById("modal-title").innerText = title;
-    const msg = "I want to buy " + title + " for $" + price;
-    document.getElementById("whatsapp").href = "https://wa.me/234703689704?text=" + encodeURIComponent(msg);
-}
-
-function closeModal(){ document.getElementById("modal").style.display = "none"; }
-
-loadAccounts();
+// Run the function
+loadData();
 </script>
 </body>
 </html>
