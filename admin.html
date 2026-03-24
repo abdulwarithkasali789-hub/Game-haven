@@ -1,117 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Haven | Admin</title>
-
-<script>
-(function(){
-  let pass = prompt("Enter Admin Password:");
-  if(pass !== "hvcked"){
-    alert("Access Denied");
-    window.location.href="index.html";
-  }
-})();
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-body{background:#0a0a0a;color:white;font-family:sans-serif;padding:20px;}
-h1{text-align:center;color:#33ff00;}
-.container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
-input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;}
-button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-.toast{position:fixed;bottom:20px;right:20px;background:#33ff00;color:black;padding:12px 20px;border-radius:8px;opacity:0;transition:0.5s;}
-.toast.error{background:#ff4444;color:white;}
-.debug{margin-top:10px;color:#33ff00;font-size:12px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Haven | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body{background:#0a0a0a;color:white;font-family:sans-serif;padding:20px;}
+        h1{text-align:center;color:#33ff00;}
+        .container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
+        input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;box-sizing:border-box;}
+        button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
+        .debug{margin-top:10px;color:#33ff00;font-size:12px;text-align:center;}
+    </style>
 </head>
-
 <body>
 
 <div class="container">
-<h1>Game Haven Admin</h1>
+    <h1>Game Haven Admin</h1>
 
-<input id="title" placeholder="Listing Title">
-<input id="game" placeholder="Game Name">
-<input id="price" type="number" placeholder="Price USD">
-<input id="image" placeholder="Image URL">
+    <input id="title" placeholder="Listing Title">
+    <input id="game" placeholder="Game Name">
+    <input id="price" type="number" placeholder="Price USD">
+    <input id="image" placeholder="Image URL (Optional)">
+    <textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
 
-<textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
+    <button onclick="uploadAccounts()">Upload Accounts</button>
 
-<button onclick="uploadAccounts()">Upload Accounts</button>
-
-<div id="debug" class="debug"></div>
+    <div id="debug" class="debug">Status: Ready</div>
 </div>
 
-<div id="toast" class="toast"></div>
-
 <script>
-
-// 🔥 PASTE YOUR ANON KEY BELOW
+// 1. Setup the connection to your Supabase
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
 );
 
-function toast(msg,type="success"){
-  let t=document.getElementById("toast");
-  t.innerText=msg;
-  t.className="toast"+(type==="error"?" error":"");
-  t.style.opacity="1";
-  setTimeout(()=>t.style.opacity="0",2500);
-}
+// 2. This is the function the button calls
+async function uploadAccounts() {
+    // Alert 1: Proves the button is working
+    alert("Step 1: Button clicked! Starting upload...");
 
-function debug(msg){
-  document.getElementById("debug").innerText = msg;
-}
+    try {
+        const t = document.getElementById("title").value.trim();
+        const g = document.getElementById("game").value.trim();
+        const p = document.getElementById("price").value.trim();
+        const img = document.getElementById("image").value.trim();
+        const accs = document.getElementById("accounts").value.trim();
 
-async function uploadAccounts(){
+        if (!t || !g || !p || !accs) {
+            alert("Error: Please fill in all boxes!");
+            return;
+        }
 
-  alert("Button clicked"); // ✅ confirms button works
+        const list = accs.split("\n").filter(x => x.trim() !== "");
+        
+        // Match your database columns exactly
+        const rows = list.map(item => ({
+            title: t,
+            game_name: g,
+            price: parseFloat(p),
+            account_details: item,
+            image_url: img || null,
+            is_sold: false
+        }));
 
-  let title=document.getElementById("title").value.trim();
-  let game=document.getElementById("game").value.trim();
-  let price=document.getElementById("price").value.trim();
-  let image=document.getElementById("image").value.trim();
-  let list=document.getElementById("accounts").value.split("\n").filter(x=>x.trim()!="");
+        document.getElementById("debug").innerText = "Status: Uploading...";
 
-  if(!title||!game||!price||!list.length){
-    toast("Fill all fields!","error");
-    debug("Missing fields");
-    return;
-  }
+        // Send to Supabase
+        const { error } = await supabase.from("game_accounts").insert(rows);
 
-  let rows=list.map(acc=>({
-    title:title,
-    game_name:game,
-    price:parseFloat(price),
-    account_details:acc,
-    image_url:image,
-    is_sold:false
-  }));
+        if (error) {
+            alert("DATABASE ERROR: " + error.message);
+            document.getElementById("debug").innerText = "Status: Failed";
+        } else {
+            alert("SUCCESS! " + rows.length + " accounts added to the database.");
+            document.getElementById("debug").innerText = "Status: Success!";
+            document.getElementById("accounts").value = ""; // Clear the box
+        }
 
-  debug("Uploading...");
-
-  try{
-    let {error}=await supabase.from("game_accounts").insert(rows);
-
-    if(error){
-      toast("Upload failed","error");
-      debug(error.message);
-    }else{
-      toast("Upload success");
-      debug("Uploaded "+rows.length+" accounts");
+    } catch (err) {
+        alert("CRITICAL ERROR: " + err.message);
     }
-
-  }catch(e){
-    toast("Error occurred","error");
-    debug(e.message);
-  }
 }
-
 </script>
 
 </body>
