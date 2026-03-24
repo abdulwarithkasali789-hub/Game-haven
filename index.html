@@ -4,41 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Haven | Marketplace</title>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
         body{background:#0a0a0a;color:white;font-family:sans-serif;margin:0;padding:20px;}
         h1{text-align:center;color:#33ff00;text-shadow:0 0 10px #33ff00;}
         .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-top:30px;}
-        .card{background:#111;border:1px solid #333;border-radius:12px;padding:20px;transition:.3s;}
-        .card:hover{border-color:#33ff00;box-shadow:0 0 15px #33ff0022;}
-        .card img{width:100%;border-radius:8px;margin-bottom:10px;height:180px;object-fit:cover;background:#222;}
+        .card{background:#111;border:1px solid #333;border-radius:12px;padding:20px;transition:.3s;border: 1px solid #33ff00;}
+        .card img{width:100%;border-radius:8px;height:180px;object-fit:cover;background:#222;}
         .price{color:#33ff00;font-size:20px;font-weight:bold;}
         button{width:100%;margin-top:10px;padding:12px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
+        #debug-info{text-align:center; color:#555; font-size:12px; margin-top:10px;}
         #modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:100;}
         .modal-box{background:#111;padding:20px;border-radius:12px;width:300px;text-align:center;border:1px solid #33ff00;}
         .modal-box a{display:block;margin:10px 0;padding:12px;background:#33ff00;color:black;text-decoration:none;border-radius:6px;font-weight:bold;}
-        .cancel-btn{background:#444;color:white;margin-top:5px;}
     </style>
 </head>
-
 <body>
 
 <h1>GAME HAVEN</h1>
+<div id="debug-info">Checking database connection...</div>
+
 <div id="accounts" class="grid"></div>
 
 <div id="modal">
     <div class="modal-box">
-        <h3>Confirm Purchase</h3>
-        <p id="modal-text" style="font-size:14px; color:#ccc;"></p>
+        <h3 id="modal-title">Buy Account</h3>
         <a id="whatsapp" target="_blank">Contact on WhatsApp</a>
-        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        <button onclick="closeModal()">Cancel</button>
     </div>
 </div>
 
 <script>
-// 1. DATABASE CONNECTION
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
@@ -46,68 +42,64 @@ const supabase = window.supabase.createClient(
 
 async function loadAccounts(){
     const container = document.getElementById("accounts");
-    container.innerHTML = "<p style='text-align:center;'>Loading current inventory...</p>";
-
-    // Get all accounts that aren't sold
-    const {data, error} = await supabase
-        .from("game_accounts")
-        .select("*")
-        .eq("is_sold", false);
-
-    if(error){ 
-        container.innerHTML="<p style='color:red;'>Failed to load marketplace.</p>"; 
-        return; 
-    }
+    const debug = document.getElementById("debug-info");
     
-    if(!data || data.length === 0){ 
-        container.innerHTML="<p style='text-align:center;color:#888;'>The vault is currently empty!</p>"; 
-        return; 
+    try {
+        debug.innerText = "Step 1: Fetching data from game_accounts...";
+        const {data, error} = await supabase
+            .from("game_accounts")
+            .select("*"); // Removed the .eq check just to see if ANY data comes through first
+
+        if(error) {
+            debug.innerText = "Database Error: " + error.message;
+            return;
+        }
+
+        if(!data || data.length === 0){
+            debug.innerText = "Connected! But no data found in your table.";
+            container.innerHTML = "<p style='text-align:center; grid-column:1/-1;'>Vault is currently empty!</p>";
+            return;
+        }
+
+        debug.innerText = "Found " + data.length + " items. Generating cards...";
+        container.innerHTML = "";
+        
+        data.forEach(acc => {
+            const imgUrl = (acc.image_url && acc.image_url !== "EMPTY") ? acc.image_url : 'https://via.placeholder.com/300x200?text=Game+Haven';
+            
+            // Only show items that are NOT sold
+            if (acc.is_sold === false) {
+                container.innerHTML += `
+                    <div class="card">
+                        <img src="${imgUrl}">
+                        <h3>${acc.title}</h3>
+                        <p style="color:#888">${acc.game_name}</p>
+                        <div class="price">$${acc.price}</div>
+                        <button onclick="buyAccount('${acc.title.replace(/'/g, "\\'")}', '${acc.price}')">BUY NOW</button>
+                    </div>
+                `;
+            }
+        });
+
+        if(container.innerHTML === "") {
+            debug.innerText = "All items in database are marked as SOLD.";
+        }
+
+    } catch (err) {
+        debug.innerText = "System Error: " + err.message;
     }
-
-    container.innerHTML = "";
-
-    // Group accounts so we don't show the same game 10 times
-    const grouped = {};
-    data.forEach(acc => {
-        const key = `${acc.title}|${acc.game_name}|${acc.price}|${acc.image_url || ''}`;
-        if(!grouped[key]) grouped[key] = [];
-        grouped[key].push(acc);
-    });
-
-    // Create cards for each game type
-    Object.keys(grouped).forEach(key => {
-        const [title, game, price, image] = key.split("|");
-        const stockCount = grouped[key].length;
-        const displayImage = (image && image !== "null" && image !== "") ? image : 'https://via.placeholder.com/300x200?text=No+Preview';
-
-        container.innerHTML += `
-        <div class="card">
-            <img src="${displayImage}" onerror="this.src='https://via.placeholder.com/300x200?text=Image+Error'">
-            <h3 style="margin:5px 0; color:#33ff00;">${title}</h3>
-            <p style="margin:0 0 10px 0; color:#888; font-size:14px;">${game}</p>
-            <div class="price">$${price}</div>
-            <div style="margin-top:10px; font-size:12px; color:#555;">⚡ STOCK: ${stockCount}</div>
-            <button onclick="buyAccount('${title.replace(/'/g, "\\'")}', ${price})">BUY NOW</button>
-        </div>
-        `;
-    });
 }
 
 function buyAccount(title, price){
     document.getElementById("modal").style.display = "flex";
-    document.getElementById("modal-text").innerText = "You are buying: " + title;
-    
-    const message = `Hello! I want to buy ${title} for $${price}. Is it available?`;
-    document.getElementById("whatsapp").href = "https://wa.me/234703689704?text=" + encodeURIComponent(message);
+    document.getElementById("modal-title").innerText = title;
+    const msg = "I want to buy " + title + " for $" + price;
+    document.getElementById("whatsapp").href = "https://wa.me/234703689704?text=" + encodeURIComponent(msg);
 }
 
-function closeModal(){ 
-    document.getElementById("modal").style.display = "none"; 
-}
+function closeModal(){ document.getElementById("modal").style.display = "none"; }
 
-// Start loading
 loadAccounts();
 </script>
-
 </body>
 </html>
