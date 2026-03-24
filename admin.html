@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Haven | Admin</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
     <script>
-        // RE-ADDED YOUR PASSWORD LOGIC
         (function(){
             let pass = prompt("Enter Admin Password:");
             if(pass !== "hvcked"){
@@ -21,7 +20,7 @@
         .container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
         input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;box-sizing:border-box;}
         button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
-        .debug{margin-top:10px;color:#33ff00;font-size:12px;text-align:center;}
+        .debug{margin-top:15px;color:#33ff00;font-size:14px;text-align:center;min-height:20px;}
     </style>
 </head>
 <body>
@@ -33,53 +32,64 @@
     <input id="price" type="number" placeholder="Price USD">
     <input id="image" placeholder="Image URL">
     <textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
-    
+
     <button id="uploadBtn">Upload Accounts</button>
     <div id="debug" class="debug">Status: Ready</div>
 </div>
 
 <script>
-const supabase = window.supabase.createClient(
-  "https://xuxflsuixgiwdvawhhbi.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
-);
+    // 1. Setup client
+    const supabase = window.supabase.createClient(
+      "https://xuxflsuixgiwdvawhhbi.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
+    );
 
-// New way to connect the button to avoid "onclick" errors
-document.getElementById("uploadBtn").addEventListener("click", async function() {
-    alert("!! CONNECTION TEST !! If you see this, the button works!");
+    // 2. Attach click event
+    document.getElementById("uploadBtn").addEventListener("click", async function() {
+        const debugDiv = document.getElementById("debug");
+        debugDiv.innerText = "Status: Button Clicked...";
+        
+        try {
+            const t = document.getElementById("title").value.trim();
+            const g = document.getElementById("game").value.trim();
+            const p = document.getElementById("price").value.trim();
+            const img = document.getElementById("image").value.trim();
+            const accs = document.getElementById("accounts").value.trim();
 
-    const t = document.getElementById("title").value;
-    const g = document.getElementById("game").value;
-    const p = document.getElementById("price").value;
-    const img = document.getElementById("image").value;
-    const accs = document.getElementById("accounts").value;
+            if (!t || !g || !p || !accs) {
+                alert("Please fill all fields!");
+                debugDiv.innerText = "Status: Missing fields";
+                return;
+            }
 
-    if (!t || !g || !p || !accs) {
-        alert("Fill all fields!");
-        return;
-    }
+            const list = accs.split("\n").filter(x => x.trim() !== "");
+            const rows = list.map(item => ({
+                title: t,
+                game_name: g,
+                price: parseFloat(p),
+                account_details: item,
+                image_url: img || null,
+                is_sold: false
+            }));
 
-    const list = accs.split("\n").filter(x => x.trim() !== "");
-    const rows = list.map(item => ({
-        title: t,
-        game_name: g,
-        price: parseFloat(p),
-        account_details: item,
-        image_url: img || null,
-        is_sold: false
-    }));
+            debugDiv.innerText = "Status: Sending to Database...";
 
-    alert("Sending to database now...");
+            const { error } = await supabase.from("game_accounts").insert(rows);
 
-    const { error } = await supabase.from("game_accounts").insert(rows);
+            if (error) {
+                alert("DATABASE ERROR: " + error.message);
+                debugDiv.innerText = "Error: " + error.message;
+            } else {
+                alert("SUCCESS! Added " + rows.length + " accounts.");
+                debugDiv.innerText = "Status: Upload Successful!";
+                document.getElementById("accounts").value = ""; 
+            }
 
-    if (error) {
-        alert("DATABASE ERROR: " + error.message);
-    } else {
-        alert("SUCCESS! " + rows.length + " accounts added.");
-        document.getElementById("accounts").value = "";
-    }
-});
+        } catch (err) {
+            alert("SYSTEM ERROR: " + err.message);
+            debugDiv.innerText = "Crash: " + err.message;
+        }
+    });
 </script>
 </body>
 </html>
