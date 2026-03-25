@@ -1,95 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Haven | Admin</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
-    <script>
-        (function(){
-            let pass = prompt("Enter Admin Password:");
-            if(pass !== "hvcked"){
-                alert("Access Denied");
-                window.location.href="index.html";
-            }
-        })();
-    </script>
-    <style>
-        body{background:#0a0a0a;color:white;font-family:sans-serif;padding:20px;}
-        h1{text-align:center;color:#33ff00;}
-        .container{max-width:600px;margin:auto;background:#111;padding:20px;border-radius:12px;border:2px solid #33ff00;}
-        input,textarea{width:100%;padding:12px;margin-top:10px;background:#222;border:1px solid #333;color:white;border-radius:6px;box-sizing:border-box;}
-        button{width:100%;padding:12px;margin-top:15px;background:#33ff00;border:none;border-radius:8px;font-weight:bold;cursor:pointer;color:black;}
-        .debug{margin-top:15px;color:#33ff00;font-size:14px;text-align:center;min-height:20px;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Haven | Admin Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+<style>
+  body{background:#0a0a0a;color:white;font-family:sans-serif;margin:0;padding:20px;}
+  h1{text-align:center;color:#33ff00;text-shadow:0 0 10px #33ff00;margin-bottom:30px;}
+  form{max-width:500px;margin:0 auto;display:flex;flex-direction:column;gap:15px;}
+  input, select{padding:12px;border-radius:8px;border:none;font-size:1rem;}
+  button{padding:12px;background:#33ff00;color:black;font-weight:bold;border:none;border-radius:8px;cursor:pointer;}
+  #status{text-align:center;color:#888;margin-top:20px;}
+  #previewBtn{background:#00ccff;color:black;margin-top:10px;}
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Game Haven Admin</h1>
-    <input id="title" placeholder="Listing Title">
-    <input id="game" placeholder="Game Name">
-    <input id="price" type="number" placeholder="Price USD">
-    <input id="image" placeholder="Image URL">
-    <textarea id="accounts" rows="5" placeholder="email:password (one per line)"></textarea>
+<h1>GAME HAVEN | Admin</h1>
 
-    <button id="uploadBtn">Upload Accounts</button>
-    <div id="debug" class="debug">Status: Ready</div>
-</div>
+<form id="gameForm">
+  <input type="text" id="title" placeholder="Game Title" required>
+  <input type="text" id="gameName" placeholder="Game Name / Description" required>
+  <input type="number" id="price" placeholder="Price ($)" required>
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option value="PS4">PS4</option>
+    <option value="PS5">PS5</option>
+    <option value="PC">PC</option>
+    <option value="Xbox">Xbox</option>
+  </select>
+  <input type="file" id="imageFile" accept="image/*" required>
+  <button type="submit">Add Game</button>
+</form>
+
+<button id="previewBtn">View on Marketplace</button>
+<div id="status">Status: Waiting for input...</div>
 
 <script>
-    // 1. Setup client
-    const supabase = window.supabase.createClient(
-      "https://xuxflsuixgiwdvawhhbi.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
-    );
+const supabase = window.supabase.createClient(
+  "https://xuxflsuixgiwdvawhhbi.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2hhd2h0aWQiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3MzA5MzUzOSwiZXhwIjoyMDg4NjY5NTM5fQ.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
+);
 
-    // 2. Attach click event
-    document.getElementById("uploadBtn").addEventListener("click", async function() {
-        const debugDiv = document.getElementById("debug");
-        debugDiv.innerText = "Status: Button Clicked...";
-        
-        try {
-            const t = document.getElementById("title").value.trim();
-            const g = document.getElementById("game").value.trim();
-            const p = document.getElementById("price").value.trim();
-            const img = document.getElementById("image").value.trim();
-            const accs = document.getElementById("accounts").value.trim();
+const form = document.getElementById("gameForm");
+const status = document.getElementById("status");
+const previewBtn = document.getElementById("previewBtn");
 
-            if (!t || !g || !p || !accs) {
-                alert("Please fill all fields!");
-                debugDiv.innerText = "Status: Missing fields";
-                return;
-            }
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  status.innerText = "Uploading image...";
 
-            const list = accs.split("\n").filter(x => x.trim() !== "");
-            const rows = list.map(item => ({
-                title: t,
-                game_name: g,
-                price: parseFloat(p),
-                account_details: item,
-                image_url: img || null,
-                is_sold: false
-            }));
+  const title = document.getElementById("title").value;
+  const gameName = document.getElementById("gameName").value;
+  const price = parseFloat(document.getElementById("price").value);
+  const category = document.getElementById("category").value;
+  const imageFile = document.getElementById("imageFile").files[0];
 
-            debugDiv.innerText = "Status: Sending to Database...";
+  if(!imageFile){ status.innerText="Please select an image."; return; }
 
-            const { error } = await supabase.from("game_accounts").insert(rows);
+  try {
+    // Upload image to Supabase storage
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage.from('game-images')
+      .upload(`public/${Date.now()}_${imageFile.name}`, imageFile);
 
-            if (error) {
-                alert("DATABASE ERROR: " + error.message);
-                debugDiv.innerText = "Error: " + error.message;
-            } else {
-                alert("SUCCESS! Added " + rows.length + " accounts.");
-                debugDiv.innerText = "Status: Upload Successful!";
-                document.getElementById("accounts").value = ""; 
-            }
+    if(uploadError){ status.innerText="Image Upload Error: "+uploadError.message; return; }
 
-        } catch (err) {
-            alert("SYSTEM ERROR: " + err.message);
-            debugDiv.innerText = "Crash: " + err.message;
-        }
-    });
+    // Get public URL
+    const { publicUrl } = supabase.storage.from('game-images').getPublicUrl(uploadData.path);
+
+    // Insert into database
+    const { data, error } = await supabase.from('game_accounts').insert([
+      { title, game_name: gameName, price, category, image_url: publicUrl, is_sold: false }
+    ]);
+
+    if(error){ status.innerText="Database Error: "+error.message; return; }
+
+    status.innerText="Game added successfully!";
+    form.reset();
+
+  } catch(err){
+    status.innerText = "System Error: " + err.message;
+  }
+});
+
+// Preview button
+previewBtn.addEventListener("click", () => {
+  window.open("index.html", "_blank"); // opens marketplace in new tab
+});
 </script>
+
 </body>
 </html>
