@@ -51,36 +51,57 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   status.innerText = "Uploading image...";
 
-  const title = document.getElementById("title").value;
-  const gameName = document.getElementById("gameName").value;
+  const title = document.getElementById("title").value.trim();
+  const gameName = document.getElementById("gameName").value.trim();
   const price = parseFloat(document.getElementById("price").value);
   const category = document.getElementById("category").value;
   const imageFile = document.getElementById("imageFile").files[0];
 
-  if(!imageFile){ status.innerText="Please select an image."; return; }
+  if (!imageFile) { 
+    status.innerText = "Please select an image."; 
+    return; 
+  }
 
   try {
+    // Generate unique file path
+    const filePath = `public/${Date.now()}_${imageFile.name}`;
+
     // Upload image to Supabase storage
     const { data: uploadData, error: uploadError } = await supabase
       .storage.from('game-images')
-      .upload(`public/${Date.now()}_${imageFile.name}`, imageFile);
+      .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
 
-    if(uploadError){ status.innerText="Image Upload Error: "+uploadError.message; return; }
+    if (uploadError) {
+      status.innerText = "Image Upload Error: " + uploadError.message;
+      return;
+    }
 
     // Get public URL
-    const { publicUrl } = supabase.storage.from('game-images').getPublicUrl(uploadData.path);
+    const { data: publicData, error: publicError } = supabase
+      .storage.from('game-images')
+      .getPublicUrl(filePath);
+
+    if (publicError) {
+      status.innerText = "Public URL Error: " + publicError.message;
+      return;
+    }
+
+    const publicUrl = publicData.publicUrl;
 
     // Insert into database
     const { data, error } = await supabase.from('game_accounts').insert([
       { title, game_name: gameName, price, category, image_url: publicUrl, is_sold: false }
     ]);
 
-    if(error){ status.innerText="Database Error: "+error.message; return; }
+    if (error) {
+      status.innerText = "Database Error: " + error.message;
+      return;
+    }
 
-    status.innerText="Game added successfully!";
+    status.innerText = "Game added successfully!";
     form.reset();
 
-  } catch(err){
+  } catch (err) {
     status.innerText = "System Error: " + err.message;
   }
 });
