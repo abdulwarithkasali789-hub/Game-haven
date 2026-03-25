@@ -12,12 +12,20 @@
   input, select{padding:12px;border-radius:8px;border:none;font-size:1rem;}
   button{padding:12px;background:#33ff00;color:black;font-weight:bold;border:none;border-radius:8px;cursor:pointer;}
   #status{text-align:center;color:#888;margin-top:20px;}
-  #previewBtn{background:#00ccff;color:black;margin-top:10px;}
 </style>
 </head>
 <body>
 
 <h1>GAME HAVEN | Admin</h1>
+
+<script>
+  // Simple login prompt
+  let pwd = prompt("Enter Admin Password:");
+  if(pwd !== "hvcked"){
+    alert("Access Denied");
+    window.location.href="index.html";
+  }
+</script>
 
 <form id="gameForm">
   <input type="text" id="title" placeholder="Game Title" required>
@@ -30,11 +38,10 @@
     <option value="PC">PC</option>
     <option value="Xbox">Xbox</option>
   </select>
-  <input type="file" id="imageFile" accept="image/*" required>
+  <input type="text" id="imageUrl" placeholder="Paste Image URL Here" required>
   <button type="submit">Add Game</button>
 </form>
 
-<button id="previewBtn">View on Marketplace</button>
 <div id="status">Status: Waiting for input...</div>
 
 <script>
@@ -45,37 +52,20 @@ const supabase = window.supabase.createClient(
 
 const form = document.getElementById("gameForm");
 const status = document.getElementById("status");
-const previewBtn = document.getElementById("previewBtn");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  status.innerText = "Uploading image...";
+  status.innerText = "Adding game...";
 
   const title = document.getElementById("title").value;
   const gameName = document.getElementById("gameName").value;
   const price = parseFloat(document.getElementById("price").value);
   const category = document.getElementById("category").value;
-  const imageFile = document.getElementById("imageFile").files[0];
-
-  if(!imageFile){ status.innerText="Please select an image."; return; }
+  const imageUrl = document.getElementById("imageUrl").value;
 
   try {
-    // Use a timestamped file name to avoid collisions
-    const fileName = `${Date.now()}_${imageFile.name}`;
-    
-    // Upload image to Supabase storage (game-images bucket)
-    const { data: uploadData, error: uploadError } = await supabase
-      .storage.from('game-images')
-      .upload(`public/${fileName}`, imageFile, { cacheControl: '3600', upsert: false });
-
-    if(uploadError){ status.innerText="Image Upload Error: "+uploadError.message; return; }
-
-    // Get public URL for uploaded image
-    const { data: { publicUrl } } = supabase.storage.from('game-images').getPublicUrl(`public/${fileName}`);
-
-    // Insert new account into database
     const { data, error } = await supabase.from('game_accounts').insert([
-      { title, game_name: gameName, price, category, image_url: publicUrl, is_sold: false }
+      { title, game_name: gameName, price, category, image_url: imageUrl, is_sold: false }
     ]);
 
     if(error){ status.innerText="Database Error: "+error.message; return; }
@@ -86,11 +76,6 @@ form.addEventListener("submit", async (e) => {
   } catch(err){
     status.innerText = "System Error: " + err.message;
   }
-});
-
-// Preview button
-previewBtn.addEventListener("click", () => {
-  window.open("index.html", "_blank"); // opens marketplace in new tab
 });
 </script>
 
