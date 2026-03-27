@@ -4,55 +4,139 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Haven | Admin Panel</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+
 <style>
-  body{background:#0a0a0a;color:white;font-family:sans-serif;margin:0;padding:20px;}
-  h1{text-align:center;color:#33ff00;text-shadow:0 0 10px #33ff00;margin-bottom:30px;}
-  form{max-width:500px;margin:0 auto;display:flex;flex-direction:column;gap:15px;}
-  input, select{padding:12px;border-radius:8px;border:none;font-size:1rem;}
-  button{padding:12px;background:#33ff00;color:black;font-weight:bold;border:none;border-radius:8px;cursor:pointer;}
-  #status{text-align:center;color:#888;margin-top:20px;}
+body{
+  background:#0b0f19;
+  color:#e5e7eb;
+  font-family:sans-serif;
+  margin:0;
+  padding:20px;
+}
+
+h1{
+  text-align:center;
+  color:#00ff88;
+  text-shadow:0 0 10px rgba(0,255,136,0.3);
+}
+
+form{
+  max-width:500px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:15px;
+  background:#111827;
+  border-radius:12px;
+}
+
+input, select{
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  outline:none;
+}
+
+button{
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.addBtn{
+  background:#00ff88;
+}
+
+.deleteBtn{
+  background:red;
+  color:white;
+  margin-right:5px;
+}
+
+.soldBtn{
+  background:#4da3ff;
+  color:white;
+}
+
+#status{
+  text-align:center;
+  margin-top:10px;
+  color:#888;
+}
+
+#adminList{
+  max-width:700px;
+  margin:30px auto;
+}
+
+.card{
+  background:#111827;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:10px;
+  border:1px solid #1f2937;
+}
+
+.soldTag{
+  color:red;
+  font-weight:bold;
+}
 </style>
 </head>
+
 <body>
 
-<h1>GAME HAVEN | Admin</h1>
+<h1>GAME HAVEN | ADMIN</h1>
 
 <script>
-  // Simple login prompt
-  let pwd = prompt("Enter Admin Password:");
-  if(pwd !== "hvcked"){
-    alert("Access Denied");
-    window.location.href="index.html";
-  }
+let pwd = prompt("Enter Admin Password:");
+if(pwd !== "hvcked"){
+  alert("Access Denied");
+  window.location.href="index.html";
+}
 </script>
 
+<!-- ADD GAME FORM -->
 <form id="gameForm">
-  <input type="text" id="title" placeholder="Game Title" required>
-  <input type="text" id="gameName" placeholder="Game Name / Description" required>
-  <input type="number" id="price" placeholder="Price ($)" required>
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option value="PS4">PS4</option>
-    <option value="PS5">PS5</option>
-    <option value="PC">PC</option>
-    <option value="Xbox">Xbox</option>
-  </select>
-  <input type="text" id="imageUrl" placeholder="Paste Image URL Here" required>
-  <button type="submit">Add Game</button>
+<input type="text" id="title" placeholder="Game Title" required>
+<input type="text" id="gameName" placeholder="Game Description" required>
+<input type="number" id="price" placeholder="Price ($)" required>
+
+<select id="category" required>
+<option value="">Select Category</option>
+<option value="PS4">PS4</option>
+<option value="PS5">PS5</option>
+<option value="PC">PC</option>
+<option value="Xbox">Xbox</option>
+</select>
+
+<input type="text" id="imageUrl" placeholder="Image URL" required>
+
+<button class="addBtn" type="submit">Add Game</button>
 </form>
 
-<div id="status">Status: Waiting for input...</div>
+<div id="status">Loading...</div>
+
+<h2 style="text-align:center;margin-top:30px;">Uploaded Games</h2>
+<div id="adminList"></div>
 
 <script>
+
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2hhd2h0aWQiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3MzA5MzUzOSwiZXhwIjoyMDg4NjY5NTM5fQ.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
 );
 
 const form = document.getElementById("gameForm");
 const status = document.getElementById("status");
+const adminList = document.getElementById("adminList");
 
+/* ADD GAME */
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   status.innerText = "Adding game...";
@@ -63,20 +147,68 @@ form.addEventListener("submit", async (e) => {
   const category = document.getElementById("category").value;
   const imageUrl = document.getElementById("imageUrl").value;
 
-  try {
-    const { data, error } = await supabase.from('game_accounts').insert([
-      { title, game_name: gameName, price, category, image_url: imageUrl, is_sold: false }
-    ]);
+  const { error } = await supabase.from("game_accounts").insert([
+    {
+      title,
+      game_name: gameName,
+      price,
+      category,
+      image_url: imageUrl,
+      is_sold: false
+    }
+  ]);
 
-    if(error){ status.innerText="Database Error: "+error.message; return; }
-
-    status.innerText="Game added successfully!";
+  if(error){
+    status.innerText = "Error: " + error.message;
+  } else {
+    status.innerText = "Game added successfully!";
     form.reset();
-
-  } catch(err){
-    status.innerText = "System Error: " + err.message;
+    loadGames();
   }
 });
+
+/* LOAD GAMES */
+async function loadGames(){
+  const { data } = await supabase.from("game_accounts").select("*");
+  renderGames(data);
+}
+
+/* RENDER ADMIN LIST */
+function renderGames(games){
+  adminList.innerHTML = "";
+
+  games.forEach(g => {
+    adminList.innerHTML += `
+      <div class="card">
+        <h3>${g.title}</h3>
+        <p>${g.game_name}</p>
+        <p>$${g.price} | ${g.category}</p>
+        ${g.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
+
+        <button class="deleteBtn" onclick="deleteGame('${g.id}')">DELETE</button>
+        <button class="soldBtn" onclick="markSold('${g.id}')">MARK SOLD</button>
+      </div>
+    `;
+  });
+}
+
+/* DELETE GAME */
+async function deleteGame(id){
+  await supabase.from("game_accounts").delete().eq("id", id);
+  loadGames();
+}
+
+/* MARK SOLD */
+async function markSold(id){
+  await supabase.from("game_accounts")
+    .update({ is_sold: true })
+    .eq("id", id);
+
+  loadGames();
+}
+
+loadGames();
+
 </script>
 
 </body>
