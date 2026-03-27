@@ -3,33 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Haven | Admin Panel</title>
+<title>Game Haven Admin</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
 
 <style>
 body{
-  background:#0b0f19;
-  color:#e5e7eb;
-  font-family:sans-serif;
   margin:0;
   padding:20px;
+  font-family:Arial;
+  background:#0b0f19;
+  color:#e5e7eb;
 }
 
 h1{
   text-align:center;
   color:#00ff88;
-  text-shadow:0 0 10px rgba(0,255,136,0.3);
 }
 
 form{
-  max-width:500px;
-  margin:0 auto;
+  max-width:520px;
+  margin:20px auto;
   display:flex;
   flex-direction:column;
-  gap:12px;
-  padding:15px;
+  gap:10px;
   background:#111827;
+  padding:15px;
   border-radius:12px;
 }
 
@@ -48,37 +47,27 @@ button{
   font-weight:bold;
 }
 
-.addBtn{
+.add{
   background:#00ff88;
 }
 
-.deleteBtn{
+.delete{
   background:red;
   color:white;
   margin-right:5px;
 }
 
-.soldBtn{
+.sold{
   background:#4da3ff;
   color:white;
-}
-
-#status{
-  text-align:center;
-  margin-top:10px;
-  color:#888;
-}
-
-#adminList{
-  max-width:700px;
-  margin:30px auto;
 }
 
 .card{
   background:#111827;
   padding:15px;
+  margin:10px auto;
+  max-width:700px;
   border-radius:10px;
-  margin-bottom:10px;
   border:1px solid #1f2937;
 }
 
@@ -86,44 +75,53 @@ button{
   color:red;
   font-weight:bold;
 }
+
+#status{
+  text-align:center;
+  color:#aaa;
+}
 </style>
 </head>
 
 <body>
 
-<h1>GAME HAVEN | ADMIN</h1>
+<h1>GAME HAVEN ADMIN PANEL</h1>
 
 <script>
-let pwd = prompt("Enter Admin Password:");
-if(pwd !== "hvcked"){
+let pass = prompt("Enter Admin Password:");
+if(pass !== "hvcked"){
   alert("Access Denied");
-  window.location.href="index.html";
+  window.location.href = "index.html";
 }
 </script>
 
-<!-- ADD GAME FORM -->
-<form id="gameForm">
-<input type="text" id="title" placeholder="Game Title" required>
-<input type="text" id="gameName" placeholder="Game Description" required>
-<input type="number" id="price" placeholder="Price ($)" required>
+<form id="form">
 
-<select id="category" required>
-<option value="">Select Category</option>
-<option value="PS4">PS4</option>
-<option value="PS5">PS5</option>
-<option value="PC">PC</option>
-<option value="Xbox">Xbox</option>
+<input type="text" id="title" placeholder="Account Title" required>
+
+<select id="game_name" required>
+  <option value="">Select Game</option>
+  <option value="COD">COD</option>
+  <option value="GTA">GTA</option>
+  <option value="FIFA">FIFA</option>
+  <option value="PUBG">PUBG</option>
+  <option value="FF">Free Fire</option>
 </select>
 
-<input type="text" id="imageUrl" placeholder="Image URL" required>
+<input type="email" id="account_details" placeholder="Account Email" required>
 
-<button class="addBtn" type="submit">Add Game</button>
+<input type="number" id="price" placeholder="Price" required>
+
+<input type="text" id="image_url" placeholder="Image URL" required>
+
+<button class="add" type="submit">Add Account</button>
+
 </form>
 
 <div id="status">Loading...</div>
 
-<h2 style="text-align:center;margin-top:30px;">Uploaded Games</h2>
-<div id="adminList"></div>
+<h2 style="text-align:center;">All Accounts</h2>
+<div id="list"></div>
 
 <script>
 
@@ -132,28 +130,28 @@ const supabase = window.supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
 );
 
-const form = document.getElementById("gameForm");
+const form = document.getElementById("form");
+const list = document.getElementById("list");
 const status = document.getElementById("status");
-const adminList = document.getElementById("adminList");
 
-/* ADD GAME */
+/* ADD */
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  status.innerText = "Adding game...";
+  status.innerText = "Uploading...";
 
   const title = document.getElementById("title").value;
-  const gameName = document.getElementById("gameName").value;
+  const game_name = document.getElementById("game_name").value;
+  const account_details = document.getElementById("account_details").value;
   const price = parseFloat(document.getElementById("price").value);
-  const category = document.getElementById("category").value;
-  const imageUrl = document.getElementById("imageUrl").value;
+  const image_url = document.getElementById("image_url").value;
 
   const { error } = await supabase.from("game_accounts").insert([
     {
       title,
-      game_name: gameName,
+      game_name,
+      account_details,
       price,
-      category,
-      image_url: imageUrl,
+      image_url,
       is_sold: false
     }
   ]);
@@ -161,53 +159,59 @@ form.addEventListener("submit", async (e) => {
   if(error){
     status.innerText = "Error: " + error.message;
   } else {
-    status.innerText = "Game added successfully!";
+    status.innerText = "Uploaded successfully";
     form.reset();
-    loadGames();
+    load();
   }
 });
 
-/* LOAD GAMES */
-async function loadGames(){
-  const { data } = await supabase.from("game_accounts").select("*");
-  renderGames(data);
+/* LOAD */
+async function load(){
+  const { data } = await supabase
+    .from("game_accounts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  render(data);
 }
 
-/* RENDER ADMIN LIST */
-function renderGames(games){
-  adminList.innerHTML = "";
+/* RENDER */
+function render(items){
+  list.innerHTML = "";
 
-  games.forEach(g => {
-    adminList.innerHTML += `
+  items.forEach(i => {
+    list.innerHTML += `
       <div class="card">
-        <h3>${g.title}</h3>
-        <p>${g.game_name}</p>
-        <p>$${g.price} | ${g.category}</p>
-        ${g.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
+        <h3>${i.title}</h3>
+        <p>Game: ${i.game_name}</p>
+        <p>Email: ${i.account_details}</p>
+        <p>Price: $${i.price}</p>
 
-        <button class="deleteBtn" onclick="deleteGame('${g.id}')">DELETE</button>
-        <button class="soldBtn" onclick="markSold('${g.id}')">MARK SOLD</button>
+        ${i.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
+
+        <button class="delete" onclick="del('${i.id}')">DELETE</button>
+        <button class="sold" onclick="sold('${i.id}')">MARK SOLD</button>
       </div>
     `;
   });
 }
 
-/* DELETE GAME */
-async function deleteGame(id){
+/* DELETE */
+async function del(id){
   await supabase.from("game_accounts").delete().eq("id", id);
-  loadGames();
+  load();
 }
 
-/* MARK SOLD */
-async function markSold(id){
+/* SOLD */
+async function sold(id){
   await supabase.from("game_accounts")
     .update({ is_sold: true })
     .eq("id", id);
 
-  loadGames();
+  load();
 }
 
-loadGames();
+load();
 
 </script>
 
