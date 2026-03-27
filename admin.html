@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Haven Admin</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body{
@@ -21,6 +21,20 @@ h1{
   color:#00ff88;
 }
 
+.dashboard{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:20px 0;
+}
+
+.box{
+  background:#111827;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+
 form{
   max-width:520px;
   margin:20px auto;
@@ -32,11 +46,10 @@ form{
   border-radius:12px;
 }
 
-input, select{
+input{
   padding:10px;
   border-radius:8px;
   border:none;
-  outline:none;
 }
 
 button{
@@ -47,19 +60,13 @@ button{
   font-weight:bold;
 }
 
-.add{
-  background:#00ff88;
-}
+.add{ background:#00ff88; }
 
-.delete{
-  background:red;
-  color:white;
-  margin-right:5px;
-}
-
-.sold{
-  background:#4da3ff;
-  color:white;
+.controls{
+  max-width:700px;
+  margin:10px auto;
+  display:flex;
+  gap:10px;
 }
 
 .card{
@@ -68,18 +75,30 @@ button{
   margin:10px auto;
   max-width:700px;
   border-radius:10px;
-  border:1px solid #1f2937;
 }
 
-.soldTag{
-  color:red;
-  font-weight:bold;
+img{
+  width:100%;
+  max-height:200px;
+  object-fit:cover;
+  border-radius:10px;
+  margin-top:10px;
 }
 
-#status{
+.delete{ background:red; color:white; margin-right:5px; }
+.markSold{ background:#4da3ff; color:white; margin-right:5px; }
+
+.pagination{
   text-align:center;
-  color:#aaa;
+  margin:20px;
 }
+
+button.pageBtn{
+  margin:5px;
+  padding:5px 10px;
+}
+
+.soldTag{ color:red; font-weight:bold; }
 </style>
 </head>
 
@@ -91,53 +110,55 @@ button{
 let pass = prompt("Enter Admin Password:");
 if(pass !== "hvcked"){
   alert("Access Denied");
-  window.location.href = "index.html";
+  window.location.href="index.html";
 }
 </script>
 
+<!-- DASHBOARD -->
+<div class="dashboard">
+  <div class="box" id="totalBox">Total: 0</div>
+  <div class="box" id="soldBox">Sold: 0</div>
+  <div class="box" id="revenueBox">Revenue: $0</div>
+</div>
+
+<!-- SEARCH / FILTER -->
+<div class="controls">
+  <input id="search" placeholder="Search accounts...">
+
+  <select id="filter">
+    <option value="all">All</option>
+    <option value="sold">Sold</option>
+    <option value="unsold">Unsold</option>
+  </select>
+</div>
+
+<!-- FORM -->
 <form id="form">
-
 <input type="text" id="title" placeholder="Account Title" required>
-
-<select id="game_name" required>
-  <option value="">Select Game</option>
-  <option value="COD">COD</option>
-  <option value="GTA">GTA</option>
-  <option value="FIFA">FIFA</option>
-  <option value="PUBG">PUBG</option>
-  <option value="FF">Free Fire</option>
-</select>
-
+<input type="text" id="game_name" placeholder="Game Name" required>
 <input type="email" id="account_details" placeholder="Account Email" required>
-
 <input type="number" id="price" placeholder="Price" required>
-
 <input type="text" id="image_url" placeholder="Image URL" required>
-
-<button class="add" type="submit">Add Account</button>
-
+<button class="add">Add Account</button>
 </form>
 
-<div id="status">Loading...</div>
-
-<h2 style="text-align:center;">All Accounts</h2>
 <div id="list"></div>
+<div class="pagination" id="pagination"></div>
 
 <script>
 
 const supabase = window.supabase.createClient(
   "https://xuxflsuixgiwdvawhhbi.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGZsc3VpeGdpd2R2YXdoaGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTM1MzksImV4cCI6MjA4ODY2OTUzOX0.pIUE56lEoJXUsCvFIDdyeg8wYL4QeTuEeIr-N4kGV8c"
+  "YOUR_ANON_KEY"
 );
 
-const form = document.getElementById("form");
-const list = document.getElementById("list");
-const status = document.getElementById("status");
+let allData = [];
+let page = 1;
+let limit = 5;
 
 /* ADD */
-form.addEventListener("submit", async (e) => {
+document.getElementById("form").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  status.innerText = "Uploading...";
 
   const title = document.getElementById("title").value;
   const game_name = document.getElementById("game_name").value;
@@ -145,71 +166,129 @@ form.addEventListener("submit", async (e) => {
   const price = parseFloat(document.getElementById("price").value);
   const image_url = document.getElementById("image_url").value;
 
-  const { error } = await supabase.from("game_accounts").insert([
-    {
-      title,
-      game_name,
-      account_details,
-      price,
-      image_url,
-      is_sold: false
-    }
-  ]);
+  await supabase.from("game_accounts").insert([{
+    title,
+    game_name,
+    account_details,
+    price,
+    image_url,
+    is_sold:false
+  }]);
 
-  if(error){
-    status.innerText = "Error: " + error.message;
-  } else {
-    status.innerText = "Uploaded successfully";
-    form.reset();
-    load();
-  }
+  e.target.reset();
+  load();
 });
 
 /* LOAD */
 async function load(){
-  const { data } = await supabase
-    .from("game_accounts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data } = await supabase.from("game_accounts").select("*");
+  allData = data || [];
+  render();
+  updateDashboard();
+}
 
-  render(data);
+/* DASHBOARD */
+function updateDashboard(){
+  const total = allData.length;
+  const sold = allData.filter(i=>i.is_sold).length;
+  const revenue = allData
+    .filter(i=>i.is_sold)
+    .reduce((sum,i)=>sum + Number(i.price),0);
+
+  document.getElementById("totalBox").innerText = "Total: " + total;
+  document.getElementById("soldBox").innerText = "Sold: " + sold;
+  document.getElementById("revenueBox").innerText = "Revenue: $" + revenue;
+}
+
+/* FILTER + SEARCH */
+function getFiltered(){
+  let data = [...allData];
+
+  const search = document.getElementById("search").value.toLowerCase();
+  const filter = document.getElementById("filter").value;
+
+  if(search){
+    data = data.filter(i =>
+      i.title.toLowerCase().includes(search) ||
+      i.game_name.toLowerCase().includes(search)
+    );
+  }
+
+  if(filter === "sold") data = data.filter(i=>i.is_sold);
+  if(filter === "unsold") data = data.filter(i=>!i.is_sold);
+
+  return data;
+}
+
+/* PAGINATION */
+function paginate(data){
+  const start = (page-1)*limit;
+  return data.slice(start, start+limit);
 }
 
 /* RENDER */
-function render(items){
+function render(){
+  let data = getFiltered();
+  const paginated = paginate(data);
+
+  const list = document.getElementById("list");
   list.innerHTML = "";
 
-  items.forEach(i => {
+  paginated.forEach(i=>{
     list.innerHTML += `
       <div class="card">
         <h3>${i.title}</h3>
-        <p>Game: ${i.game_name}</p>
-        <p>Email: ${i.account_details}</p>
-        <p>Price: $${i.price}</p>
+        <p>${i.game_name}</p>
+        <p>${i.account_details}</p>
+        <p>$${i.price}</p>
+
+        <img src="${i.image_url}" />
 
         ${i.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
 
+        <button class="markSold" onclick="markSold('${i.id}')">MARK SOLD</button>
         <button class="delete" onclick="del('${i.id}')">DELETE</button>
-        <button class="sold" onclick="sold('${i.id}')">MARK SOLD</button>
       </div>
     `;
   });
+
+  renderPagination(data);
+}
+
+/* PAGINATION UI */
+function renderPagination(data){
+  const pages = Math.ceil(data.length / limit);
+  const pag = document.getElementById("pagination");
+  pag.innerHTML = "";
+
+  for(let i=1;i<=pages;i++){
+    pag.innerHTML += `<button class="pageBtn" onclick="go(${i})">${i}</button>`;
+  }
+}
+
+function go(p){
+  page = p;
+  render();
 }
 
 /* DELETE */
 async function del(id){
-  await supabase.from("game_accounts").delete().eq("id", id);
+  await supabase.from("game_accounts").delete().eq("id",id);
   load();
 }
 
-/* SOLD */
-async function sold(id){
+/* MARK SOLD */
+async function markSold(id){
   await supabase.from("game_accounts")
-    .update({ is_sold: true })
-    .eq("id", id);
+    .update({is_sold:true})
+    .eq("id",id);
 
   load();
 }
+
+/* EVENTS */
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("filter").addEventListener("change", render);
 
 load();
 
