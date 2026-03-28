@@ -18,20 +18,6 @@ body{
 
 h1{text-align:center;color:#00ff88;}
 
-.dashboard{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  margin:20px 0;
-}
-
-.box{
-  background:#111827;
-  padding:10px;
-  border-radius:10px;
-  text-align:center;
-}
-
 form{
   max-width:520px;
   margin:20px auto;
@@ -58,13 +44,8 @@ button{
 }
 
 .add{ background:#00ff88; }
-
-.controls{
-  max-width:700px;
-  margin:10px auto;
-  display:flex;
-  gap:10px;
-}
+.delete{ background:red; color:white; }
+.sold{ background:#4da3ff; color:white; }
 
 .card{
   background:#111827;
@@ -82,10 +63,18 @@ img{
   margin-top:10px;
 }
 
-.delete{ background:red; color:white; margin-right:5px; }
-.markSold{ background:#4da3ff; color:white; margin-right:5px; }
+#search{
+  display:block;
+  margin:10px auto;
+  padding:10px;
+  width:300px;
+  border-radius:8px;
+  border:none;
+}
 
-.hidden{ display:none; }
+#list{
+  display:none; /* hidden by default */
+}
 
 .soldTag{ color:red; font-weight:bold; }
 </style>
@@ -96,46 +85,31 @@ img{
 <h1>GAME HAVEN ADMIN PANEL</h1>
 
 <script>
-// ✅ FIXED LOGIN (runs once only)
-if(sessionStorage.getItem("admin") !== "true"){
-  let pass = prompt("Enter Admin Password:");
-  if(pass === "hvcked"){
-    sessionStorage.setItem("admin","true");
-  } else {
-    alert("Access Denied");
-    window.location.href="index.html";
-  }
+let pass = prompt("Enter Admin Password:");
+if(pass !== "hvcked"){
+  alert("Access Denied");
+  window.location.href="index.html";
 }
 </script>
 
-<!-- DASHBOARD -->
-<div class="dashboard">
-  <div class="box" id="totalBox">Total: 0</div>
-  <div class="box" id="soldBox">Sold: 0</div>
-  <div class="box" id="revenueBox">Revenue: $0</div>
-</div>
-
-<!-- BUTTON TO SHOW ACCOUNTS -->
+<!-- SHOW / HIDE BUTTON -->
 <div style="text-align:center;">
   <button onclick="toggleList()">Show / Hide Accounts</button>
 </div>
 
-<!-- SEARCH -->
-<div class="controls">
-  <input id="search" placeholder="Search accounts...">
-</div>
+<input id="search" placeholder="Search accounts...">
 
-<!-- FORM -->
 <form id="form">
 <input type="text" id="title" placeholder="Account Title" required>
 <input type="text" id="game_name" placeholder="Game Name" required>
 <input type="email" id="account_details" placeholder="Account Email" required>
 <input type="number" id="price" placeholder="Price" required>
 <input type="text" id="image_url" placeholder="Image URL" required>
-<button class="add">Add Account</button>
+
+<button type="submit" class="add">Add Account</button>
 </form>
 
-<div id="list" class="hidden"></div>
+<div id="list"></div>
 
 <script>
 
@@ -145,34 +119,27 @@ const supabase = window.supabase.createClient(
 );
 
 let allData = [];
-let visible = false;
 
-/* TOGGLE LIST */
+/* TOGGLE FIX */
 function toggleList(){
-  visible = !visible;
-  document.getElementById("list").classList.toggle("hidden");
+  const list = document.getElementById("list");
+  list.style.display = list.style.display === "none" ? "block" : "none";
 }
 
-/* ADD */
+/* ADD FIX (NO RELOAD) */
 document.getElementById("form").addEventListener("submit", async (e)=>{
   e.preventDefault();
 
-  const title = document.getElementById("title").value;
-  const game_name = document.getElementById("game_name").value;
-  const account_details = document.getElementById("account_details").value;
-  const price = parseFloat(document.getElementById("price").value);
-  const image_url = document.getElementById("image_url").value;
-
   await supabase.from("game_accounts").insert([{
-    title,
-    game_name,
-    account_details,
-    price,
-    image_url,
+    title: title.value,
+    game_name: game_name.value,
+    account_details: account_details.value,
+    price: parseFloat(price.value),
+    image_url: image_url.value,
     is_sold:false
   }]);
 
-  e.target.reset();
+  form.reset();
   load();
 });
 
@@ -181,37 +148,23 @@ async function load(){
   const { data } = await supabase.from("game_accounts").select("*");
   allData = data || [];
   render();
-  updateDashboard();
 }
 
-/* DASHBOARD */
-function updateDashboard(){
-  const total = allData.length;
-  const sold = allData.filter(i=>i.is_sold).length;
-  const revenue = allData
-    .filter(i=>i.is_sold)
-    .reduce((sum,i)=>sum + Number(i.price),0);
-
-  totalBox.innerText = "Total: " + total;
-  soldBox.innerText = "Sold: " + sold;
-  revenueBox.innerText = "Revenue: $" + revenue;
-}
-
-/* SEARCH */
+/* SEARCH FIX */
 document.getElementById("search").addEventListener("input", render);
 
-/* RENDER */
+/* RENDER FIX */
 function render(){
-  const search = document.getElementById("search").value.toLowerCase();
+  const value = document.getElementById("search").value.toLowerCase();
 
-  let filtered = allData.filter(i =>
-    i.title.toLowerCase().includes(search) ||
-    i.game_name.toLowerCase().includes(search)
+  const filtered = allData.filter(i =>
+    i.title.toLowerCase().includes(value) ||
+    i.game_name.toLowerCase().includes(value)
   );
 
   list.innerHTML = "";
 
-  filtered.forEach(i=>{
+  filtered.forEach(i => {
     list.innerHTML += `
       <div class="card">
         <h3>${i.title}</h3>
@@ -223,7 +176,7 @@ function render(){
 
         ${i.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
 
-        <button class="markSold" onclick="markSold('${i.id}')">MARK SOLD</button>
+        <button class="sold" onclick="markSold('${i.id}')">MARK SOLD</button>
         <button class="delete" onclick="del('${i.id}')">DELETE</button>
       </div>
     `;
@@ -232,15 +185,15 @@ function render(){
 
 /* DELETE */
 async function del(id){
-  await supabase.from("game_accounts").delete().eq("id",id);
+  await supabase.from("game_accounts").delete().eq("id", id);
   load();
 }
 
-/* MARK SOLD */
+/* SOLD */
 async function markSold(id){
   await supabase.from("game_accounts")
-    .update({is_sold:true})
-    .eq("id",id);
+    .update({ is_sold:true })
+    .eq("id", id);
 
   load();
 }
