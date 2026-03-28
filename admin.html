@@ -16,10 +16,7 @@ body{
   color:#e5e7eb;
 }
 
-h1{
-  text-align:center;
-  color:#00ff88;
-}
+h1{text-align:center;color:#00ff88;}
 
 .dashboard{
   display:grid;
@@ -88,15 +85,7 @@ img{
 .delete{ background:red; color:white; margin-right:5px; }
 .markSold{ background:#4da3ff; color:white; margin-right:5px; }
 
-.pagination{
-  text-align:center;
-  margin:20px;
-}
-
-button.pageBtn{
-  margin:5px;
-  padding:5px 10px;
-}
+.hidden{ display:none; }
 
 .soldTag{ color:red; font-weight:bold; }
 </style>
@@ -107,10 +96,15 @@ button.pageBtn{
 <h1>GAME HAVEN ADMIN PANEL</h1>
 
 <script>
-let pass = prompt("Enter Admin Password:");
-if(pass !== "hvcked"){
-  alert("Access Denied");
-  window.location.href="index.html";
+// ✅ FIXED LOGIN (runs once only)
+if(sessionStorage.getItem("admin") !== "true"){
+  let pass = prompt("Enter Admin Password:");
+  if(pass === "hvcked"){
+    sessionStorage.setItem("admin","true");
+  } else {
+    alert("Access Denied");
+    window.location.href="index.html";
+  }
 }
 </script>
 
@@ -121,15 +115,14 @@ if(pass !== "hvcked"){
   <div class="box" id="revenueBox">Revenue: $0</div>
 </div>
 
-<!-- SEARCH / FILTER -->
+<!-- BUTTON TO SHOW ACCOUNTS -->
+<div style="text-align:center;">
+  <button onclick="toggleList()">Show / Hide Accounts</button>
+</div>
+
+<!-- SEARCH -->
 <div class="controls">
   <input id="search" placeholder="Search accounts...">
-
-  <select id="filter">
-    <option value="all">All</option>
-    <option value="sold">Sold</option>
-    <option value="unsold">Unsold</option>
-  </select>
 </div>
 
 <!-- FORM -->
@@ -142,8 +135,7 @@ if(pass !== "hvcked"){
 <button class="add">Add Account</button>
 </form>
 
-<div id="list"></div>
-<div class="pagination" id="pagination"></div>
+<div id="list" class="hidden"></div>
 
 <script>
 
@@ -153,8 +145,13 @@ const supabase = window.supabase.createClient(
 );
 
 let allData = [];
-let page = 1;
-let limit = 5;
+let visible = false;
+
+/* TOGGLE LIST */
+function toggleList(){
+  visible = !visible;
+  document.getElementById("list").classList.toggle("hidden");
+}
 
 /* ADD */
 document.getElementById("form").addEventListener("submit", async (e)=>{
@@ -195,46 +192,26 @@ function updateDashboard(){
     .filter(i=>i.is_sold)
     .reduce((sum,i)=>sum + Number(i.price),0);
 
-  document.getElementById("totalBox").innerText = "Total: " + total;
-  document.getElementById("soldBox").innerText = "Sold: " + sold;
-  document.getElementById("revenueBox").innerText = "Revenue: $" + revenue;
+  totalBox.innerText = "Total: " + total;
+  soldBox.innerText = "Sold: " + sold;
+  revenueBox.innerText = "Revenue: $" + revenue;
 }
 
-/* FILTER + SEARCH */
-function getFiltered(){
-  let data = [...allData];
-
-  const search = document.getElementById("search").value.toLowerCase();
-  const filter = document.getElementById("filter").value;
-
-  if(search){
-    data = data.filter(i =>
-      i.title.toLowerCase().includes(search) ||
-      i.game_name.toLowerCase().includes(search)
-    );
-  }
-
-  if(filter === "sold") data = data.filter(i=>i.is_sold);
-  if(filter === "unsold") data = data.filter(i=>!i.is_sold);
-
-  return data;
-}
-
-/* PAGINATION */
-function paginate(data){
-  const start = (page-1)*limit;
-  return data.slice(start, start+limit);
-}
+/* SEARCH */
+document.getElementById("search").addEventListener("input", render);
 
 /* RENDER */
 function render(){
-  let data = getFiltered();
-  const paginated = paginate(data);
+  const search = document.getElementById("search").value.toLowerCase();
 
-  const list = document.getElementById("list");
+  let filtered = allData.filter(i =>
+    i.title.toLowerCase().includes(search) ||
+    i.game_name.toLowerCase().includes(search)
+  );
+
   list.innerHTML = "";
 
-  paginated.forEach(i=>{
+  filtered.forEach(i=>{
     list.innerHTML += `
       <div class="card">
         <h3>${i.title}</h3>
@@ -242,7 +219,7 @@ function render(){
         <p>${i.account_details}</p>
         <p>$${i.price}</p>
 
-        <img src="${i.image_url}" />
+        <img src="${i.image_url}">
 
         ${i.is_sold ? `<p class="soldTag">SOLD</p>` : ""}
 
@@ -251,24 +228,6 @@ function render(){
       </div>
     `;
   });
-
-  renderPagination(data);
-}
-
-/* PAGINATION UI */
-function renderPagination(data){
-  const pages = Math.ceil(data.length / limit);
-  const pag = document.getElementById("pagination");
-  pag.innerHTML = "";
-
-  for(let i=1;i<=pages;i++){
-    pag.innerHTML += `<button class="pageBtn" onclick="go(${i})">${i}</button>`;
-  }
-}
-
-function go(p){
-  page = p;
-  render();
 }
 
 /* DELETE */
@@ -285,10 +244,6 @@ async function markSold(id){
 
   load();
 }
-
-/* EVENTS */
-document.getElementById("search").addEventListener("input", render);
-document.getElementById("filter").addEventListener("change", render);
 
 load();
 
